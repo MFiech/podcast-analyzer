@@ -1,0 +1,16 @@
+yt-dlp
+# openai-whisper is replaced by faster-whisper for better performance and stability
+faster-whisper
+pymongo
+click
+requests
+python-dotenv
+openai
+feedparser
+celery
+redis
+Flask
+pymongo[srv]
+markdown
+docker
+langfuse

@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  redis:
+    image: "redis:alpine"
+    container_name: redis
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  web:
+    build: .
+    container_name: podcast_web
+    command: flask --app web.app run --host=0.0.0.0
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./web:/app/web
+      - ./data:/app/data
+      - ./.env:/app/.env
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
+      - FLASK_ENV=development
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
+    depends_on:
+      - mongo
+      - redis
+
+  worker:
+    build: .
+    container_name: podcast_worker
+    command: celery -A celery_app worker --loglevel=info
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_HOST=http://host.docker.internal:4000
+      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+      - mongo
+    restart: unless-stopped
+
+  feeder:
+    build: .
+    container_name: podcast_feeder
+    command: sh -c "python init_feeds.py && python feed_processor.py"
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
+    depends_on:
+      - redis
+      - worker
+      - mongo
+
+volumes:
+  mongo_data:
