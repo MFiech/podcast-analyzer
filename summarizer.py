@@ -38,9 +38,53 @@ class PodcastSummarizer:
             timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp}] SUMMARIZER: {message}")
     
+    def summarize_with_trace(self, transcript, title="Podcast Episode", parent_span=None):
+        """Generate summary with proper Langfuse trace linking"""
+        if parent_span and self.langfuse_enabled and self.langfuse:
+            # Create a span for the summarization step under the parent span
+            with self.langfuse.start_as_current_span(
+                name="openai_summarization",
+                input={
+                    "transcript_length": len(transcript),
+                    "title": title,
+                    "prompt_source": "langfuse_managed"
+                },
+                metadata={
+                    "step": 4,
+                    "model": "gpt-4o-mini",
+                    "temperature": 0.7,
+                    "max_tokens": 2000,
+                    "type": "generation"
+                }
+            ) as summary_span:
+                # Get the actual summary
+                summary = self._do_summarize(transcript, title)
+                
+                # Update the span with the result
+                summary_span.update(
+                    output={
+                        "summary": summary,
+                        "summary_length": len(summary),
+                        "compression_ratio": f"{len(summary)/len(transcript)*100:.1f}%"
+                    }
+                )
+                
+                return summary
+        else:
+            # Fallback to regular method
+            return self.summarize(transcript, title)
+
+    def _do_summarize(self, transcript, title="Podcast Episode"):
+        """Internal method that does the actual summarization work"""
+        return self._internal_summarize(transcript, title)
+
     @observe(as_type="generation", name="podcast_summarization")
     def summarize(self, transcript, title="Podcast Episode"):
         """Generate summary from transcript using OpenAI API with Langfuse Prompt Management"""
+        return self._internal_summarize(transcript, title)
+    
+    def _internal_summarize(self, transcript, title="Podcast Episode"):
+        """Core summarization logic shared by both methods"""
         self._debug_log(f"Starting summarization for: {title}")
         self._debug_log(f"Transcript length: {len(transcript)} characters, {len(transcript.split())} words")
         
