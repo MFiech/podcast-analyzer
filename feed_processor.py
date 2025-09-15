@@ -89,7 +89,7 @@ def process_feeds():
         # Now, create placeholder and queue this episode for processing
         try:
             click.echo("  📝 Creating placeholder in database...")
-            db.create_placeholder(episode_url, episode_title)
+            db.create_placeholder(episode_url, episode_title, feed['_id'], feed_title)
             click.echo("  ⏳ Queueing episode for analysis...")
             analyze_episode.delay(episode_url)
             click.echo("  👍 Episode successfully queued.")
