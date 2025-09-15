@@ -14,7 +14,7 @@ class PodcastDB:
         self.episodes = self.db.episodes
         self.feeds = self.db.feeds
         
-    def create_placeholder(self, url, title=""):
+    def create_placeholder(self, url, title="", feed_id=None, feed_title=None):
         """Create a placeholder record for a new episode."""
         if self.episode_exists(url):
             return self.get_episode(url)
@@ -27,6 +27,13 @@ class PodcastDB:
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
+        
+        # Add feed information if provided
+        if feed_id:
+            placeholder['feed_id'] = feed_id
+        if feed_title:
+            placeholder['feed_title'] = feed_title
+            
         result = self.episodes.insert_one(placeholder)
         return self.episodes.find_one({'_id': result.inserted_id})
 
@@ -61,11 +68,33 @@ class PodcastDB:
         return self.episodes.find_one({'_id': ObjectId(episode_id)})
 
     def list_episodes(self, include_hidden=False):
-        """List all episodes"""
+        """List all episodes with feed information"""
         query = {}
         if not include_hidden:
             query['hidden'] = {'$ne': True}
-        return list(self.episodes.find(query).sort('created_at', -1))
+        
+        # Use aggregation to join with feeds collection
+        pipeline = [
+            {'$match': query},
+            {'$lookup': {
+                'from': 'feeds',
+                'localField': 'feed_id',
+                'foreignField': '_id',
+                'as': 'feed_info'
+            }},
+            {'$addFields': {
+                'feed_title': {
+                    '$cond': {
+                        'if': {'$gt': [{'$size': '$feed_info'}, 0]},
+                        'then': {'$arrayElemAt': ['$feed_info.title', 0]},
+                        'else': '$feed_title'  # Use stored feed_title if available
+                    }
+                }
+            }},
+            {'$sort': {'created_at': -1}}
+        ]
+        
+        return list(self.episodes.aggregate(pipeline))
     
     def update_episode(self, url, update_data):
         """Update episode data"""

@@ -28,6 +28,8 @@ services:
       - ./data:/app/data
       - ./.env:/app/.env
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./database.py:/app/database.py
+      - ./feed_processor.py:/app/feed_processor.py
     environment:
       - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
       - FLASK_ENV=development
@@ -46,6 +48,8 @@ services:
     volumes:
       - ./data:/app/data
       - ./.env:/app/.env
+      - ./database.py:/app/database.py
+      - ./feed_processor.py:/app/feed_processor.py
     environment:
       - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
       - OPENAI_API_KEY=${OPENAI_API_KEY}

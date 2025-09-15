@@ -31,6 +31,8 @@
             <thead>
                 <tr>
                     <th>Title</th>
+                    <th>RSS Feed</th>
+                    <th>Length</th>
                     <th>Status</th>
                     <th>Submitted</th>
                     <th>Actions</th>
@@ -42,6 +44,23 @@
                     <td>
                         {{ episode.title or 'Title not yet available' }}
                         {% if episode.hidden %}<span class="hidden-badge">(Hidden)</span>{% endif %}
+                    </td>
+                    <td>
+                        {{ episode.feed_title or 'Manual Entry' }}
+                    </td>
+                    <td>
+                        {% if episode.duration %}
+                            {% set hours = episode.duration // 3600 %}
+                            {% set minutes = (episode.duration % 3600) // 60 %}
+                            {% set seconds = episode.duration % 60 %}
+                            {% if hours > 0 %}
+                                {{ hours }}:{{ "%02d"|format(minutes) }}:{{ "%02d"|format(seconds) }}
+                            {% else %}
+                                {{ minutes }}:{{ "%02d"|format(seconds) }}
+                            {% endif %}
+                        {% else %}
+                            -
+                        {% endif %}
                     </td>
                     <td>
                         <span class="status-badge status-{{ episode.status }}">{{ episode.status }}</span>
@@ -89,7 +108,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="4">No episodes found. Add one above to get started!</td>
+                    <td colspan="6">No episodes found. Add one above to get started!</td>
                 </tr>
                 {% endfor %}
             </tbody>
