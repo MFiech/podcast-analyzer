@@ -7,7 +7,7 @@ import os
 
 class PodcastDB:
     def __init__(self):
-        connection_string = os.getenv("MONGO_CONNECTION_STRING", "mongodb://localhost:27017/")
+        connection_string = os.getenv("MONGO_CONNECTION_STRING")
         db_name = os.getenv("MONGO_DB_NAME", "podcast_analyzer")
         self.client = MongoClient(connection_string)
         self.db = self.client[db_name]
