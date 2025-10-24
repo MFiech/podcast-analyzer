@@ -4,27 +4,20 @@ Podcast summarization using OpenAI
 import time
 import os
 from datetime import datetime
-from openai import OpenAI
+from langfuse.openai import openai  # Langfuse OpenAI wrapper for automatic tracing
 from langfuse import Langfuse, observe
 
 class PodcastSummarizer:
     def __init__(self):
         self.debug = True
-        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        if not self.openai_client.api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
-        
-        # Initialize Langfuse for tracing (if enabled)
+        # Langfuse OpenAI wrapper is automatically configured via env vars
+        # No manual OpenAI client initialization needed
+
+        # Initialize Langfuse client for prompt management
         self.langfuse_enabled = os.getenv('LANGFUSE_ENABLED', 'true').lower() == 'true'
         if self.langfuse_enabled:
             try:
-                self.langfuse = Langfuse(
-                    secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-                    public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
-                    host=os.getenv('LANGFUSE_HOST', 'http://localhost:4000'),
-                    flush_at=1,  # Flush after 1 event instead of batching
-                    flush_interval=1  # Flush every 1 second
-                )
+                self.langfuse = Langfuse()
             except Exception as e:
                 self._debug_log(f"⚠️  Warning: Failed to initialize Langfuse: {str(e)}")
                 self.langfuse_enabled = False
@@ -38,88 +31,52 @@ class PodcastSummarizer:
             timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp}] SUMMARIZER: {message}")
     
-    def summarize_with_trace(self, transcript, title="Podcast Episode", parent_span=None):
-        """Generate summary with proper Langfuse trace linking"""
-        if parent_span and self.langfuse_enabled and self.langfuse:
-            # Create a span for the summarization step under the parent span
-            with self.langfuse.start_as_current_span(
-                name="openai_summarization",
-                input={
-                    "transcript_length": len(transcript),
-                    "title": title,
-                    "prompt_source": "langfuse_managed"
-                },
-                metadata={
-                    "step": 4,
-                    "model": "gpt-4o-mini",
-                    "temperature": 0.7,
-                    "max_tokens": 2000,
-                    "type": "generation"
-                }
-            ) as summary_span:
-                # Get the actual summary
-                summary = self._do_summarize(transcript, title)
-                
-                # Update the span with the result
-                summary_span.update(
-                    output={
-                        "summary": summary,
-                        "summary_length": len(summary),
-                        "compression_ratio": f"{len(summary)/len(transcript)*100:.1f}%"
-                    }
-                )
-                
-                return summary
-        else:
-            # Fallback to regular method
-            return self.summarize(transcript, title)
-
-    def _do_summarize(self, transcript, title="Podcast Episode"):
-        """Internal method that does the actual summarization work"""
-        return self._internal_summarize(transcript, title)
-
     @observe(as_type="generation", name="podcast_summarization")
     def summarize(self, transcript, title="Podcast Episode"):
-        """Generate summary from transcript using OpenAI API with Langfuse Prompt Management"""
+        """Generate summary from transcript using OpenAI API with Langfuse Chat Prompt Management"""
         return self._internal_summarize(transcript, title)
-    
+
     def _internal_summarize(self, transcript, title="Podcast Episode"):
         """Core summarization logic shared by both methods"""
         self._debug_log(f"Starting summarization for: {title}")
         self._debug_log(f"Transcript length: {len(transcript)} characters, {len(transcript.split())} words")
-        
+
         # Calculate estimated tokens (rough approximation: 1 token ≈ 4 characters)
         estimated_input_tokens = len(transcript) // 4
         self._debug_log(f"Estimated input tokens: ~{estimated_input_tokens}")
-        
-        # Get prompts from Langfuse Prompt Management
-        system_prompt_text = ""
-        user_prompt_text = ""
-        
+
+        # Get chat prompt from Langfuse Prompt Management
+        messages = []
+        langfuse_prompt = None  # For linking prompt to observation
+
         try:
             if self.langfuse_enabled and self.langfuse:
-                self._debug_log("📋 Fetching prompts from Langfuse Prompt Management...")
-                
-                # Get system prompt
-                system_prompt = self.langfuse.get_prompt("podcast-analyzer-system", label="production")
-                system_prompt_text = system_prompt.prompt
-                
-                # Get and compile user prompt with variables
-                user_prompt = self.langfuse.get_prompt("podcast-summarization-user", label="production")
-                user_prompt_text = user_prompt.compile(
+                self._debug_log("📋 Fetching chat prompt from Langfuse Prompt Management...")
+
+                # Get chat prompt and compile with variables
+                prompt_obj = self.langfuse.get_prompt("podcast-summarization", label="production", type="chat")
+
+                # Compile the chat prompt with variables (returns array of messages)
+                messages = prompt_obj.compile(
                     title=title,
                     transcript=transcript
                 )
-                
-                self._debug_log("✅ Successfully loaded prompts from Langfuse")
+
+                # Store prompt object for automatic linking
+                langfuse_prompt = prompt_obj
+
+                self._debug_log(f"✅ Successfully loaded chat prompt from Langfuse ({len(messages)} messages)")
             else:
                 raise Exception("Langfuse not enabled, using fallback prompts")
-                
+
         except Exception as e:
-            self._debug_log(f"⚠️  Failed to load Langfuse prompts, using fallback: {str(e)}")
-            # Fallback to hardcoded prompts
-            system_prompt_text = """You are a professional podcast analyst. 
-Your job is to create structured summaries of cleaned podcast transcripts. 
+            self._debug_log(f"⚠️  Failed to load Langfuse chat prompt, using fallback: {str(e)}")
+            # Fallback to hardcoded messages
+            messages = [
+                {
+                    "role": "system",
+                    "content": """You are a professional podcast analyst.
+Your job is to create structured summaries of cleaned podcast transcripts.
 Your summaries must adapt to the type of content:
 
 1. If the episode is about PRODUCT MANAGEMENT, AI, TOOLS, or OPERATIONS:
@@ -140,9 +97,10 @@ Across all types:
 - Avoid prescriptive "to-dos" for the user.
 - Quotes should be concise and memorable.
 - Companies/people should always be noted with context."""
-            
-            user_prompt_text = f"""
-Please analyze this podcast transcript and produce a structured summary with two layers:
+                },
+                {
+                    "role": "user",
+                    "content": f"""Please analyze this podcast transcript and produce a structured summary with two layers:
 
 ---
 
@@ -166,28 +124,28 @@ Please analyze this podcast transcript and produce a structured summary with two
 
 IF PRODUCT/AI/OPERATIONAL:
   **Frameworks & Methodologies:**
-  
+
   • [Framework/method: explanation or link if vague]
 
   **Tools & Tech Stacks:**
-  
+
   • [Tool/tech: context of use]
 
   **Key Insights:**
-  
+
   • [Insight phrased for product/AI relevance]
 
 IF STRATEGY/VC/TRENDS:
   **Market & Strategic Insights:**
-  
+
   • [Trend/insight: why it matters]
 
   **Investment/Startup Signals:**
-  
+
   • [Company/sector: context + thesis]
 
   **Ecosystem & Future Outlook:**
-  
+
   • [Broader implications or where to learn more]
 
 **Actionable Quotes:**
@@ -225,64 +183,49 @@ WRONG FORMAT:
 • First bullet point here • Second bullet point here
 
 Here is the transcript:
-{transcript}
-Here is the transcript:
-{transcript}
-        """
-        
+{transcript}"""
+                }
+            ]
+
         try:
             self._debug_log("🚀 Sending request to OpenAI API...")
             self._debug_log("📡 Model: gpt-4o-mini (fast & free)")
             self._debug_log("⚙️  Temperature: 0.7 (balanced creativity)")
             self._debug_log("📝 Max output tokens: 2000")
-            
+
             start_time = time.time()
-            
-            # Prepare messages using the prompt management system
-            messages = [
-                {"role": "system", "content": system_prompt_text},
-                {"role": "user", "content": user_prompt_text}
-            ]
-            
-            # Use OpenAI API with managed prompts
-            # The @observe decorator will automatically track this as a generation
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",  # Fast and free
+
+            # Use Langfuse OpenAI wrapper (automatic tracing + prompt linking)
+            response = openai.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=messages,
                 temperature=0.7,
-                max_tokens=2000
+                max_tokens=2000,
+                langfuse_prompt=langfuse_prompt  # Links chat prompt to observation
             )
-            
+
             # Log prompt source for debugging
-            prompt_source = "langfuse_prompt_management" if "podcast analyst" in system_prompt_text else "fallback"
-            self._debug_log(f"🔗 Used prompts from: {prompt_source}")
-            
+            prompt_source = "langfuse_chat_prompt" if langfuse_prompt else "fallback"
+            self._debug_log(f"🔗 Used prompt from: {prompt_source}")
+
             elapsed = time.time() - start_time
-            
+
             # Extract usage information
             usage = response.usage
             input_tokens = usage.prompt_tokens
             output_tokens = usage.completion_tokens
             total_tokens = usage.total_tokens
-            
+
             self._debug_log(f"✅ OpenAI summarization completed in {elapsed:.2f}s")
             self._debug_log(f"📊 Token usage: {input_tokens} input + {output_tokens} output = {total_tokens} total")
             self._debug_log(f"⚡ Processing speed: {total_tokens/elapsed:.1f} tokens/second")
-            
+
             summary = response.choices[0].message.content
             self._debug_log(f"📝 Summary generated: {len(summary)} characters")
             self._debug_log(f"📉 Summary ratio: {len(summary)/len(transcript)*100:.1f}% of transcript length")
-            
-            # Flush traces to Langfuse (with error handling)
-            if self.langfuse_enabled and self.langfuse:
-                try:
-                    self.langfuse.flush()
-                except Exception as e:
-                    self._debug_log(f"⚠️  Warning: Failed to flush traces to Langfuse: {str(e)}")
-                    # Don't fail the entire operation if tracing fails
-            
+
             return summary
-            
+
         except Exception as e:
             self._debug_log(f"❌ Error with OpenAI summarization: {str(e)}")
             raise RuntimeError(f"Failed to generate summary with OpenAI: {str(e)}")
