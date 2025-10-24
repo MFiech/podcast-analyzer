@@ -100,7 +100,7 @@ class PodcastDownloader:
                     return {
                         'title': title,
                         'duration': final_duration,
-                        'file_path': f'audio/{file_path.name}',
+                        'file_path': f'data/audio/{file_path.name}',
                         'url': url
                     }
                 
