@@ -26,9 +26,9 @@
             
             {% if episode.get('file_path') %}
             <div class="audio-player">
-                <h3>Audio</h3>
+                <h3>Audio{% if episode.get("duration") %} <span style="font-size: 0.8em; color: #666;">({{ (episode.duration // 60) }}:{{ "%02d" % (episode.duration % 60) }})</span>{% endif %}</h3>
                 <audio controls>
-                    <source src="/{{ episode.file_path }}" type="audio/webm">
+                    <source src="/data/{{ episode.file_path }}" type="audio/mpeg">
                     Your browser does not support the audio element.
                 </audio>
             </div>

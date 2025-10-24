@@ -113,6 +113,7 @@ def _analyze_episode_with_tracing(url, force):
         summary = summarizer.summarize(clean_transcript, episode_data['title'])
         episode_data['summary'] = summary
 
+        episode_data['duration'] = episode_data.get('duration', 0)
         # Step 5: Save to database
         episode_data['status'] = 'completed'
         db.save_episode(episode_data)
