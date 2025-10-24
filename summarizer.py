@@ -33,50 +33,50 @@ class PodcastSummarizer:
     
     @observe(as_type="generation", name="podcast_summarization")
     def summarize(self, transcript, title="Podcast Episode"):
-        """Generate summary from transcript using OpenAI API with Langfuse Prompt Management"""
+        """Generate summary from transcript using OpenAI API with Langfuse Chat Prompt Management"""
         return self._internal_summarize(transcript, title)
-    
+
     def _internal_summarize(self, transcript, title="Podcast Episode"):
         """Core summarization logic shared by both methods"""
         self._debug_log(f"Starting summarization for: {title}")
         self._debug_log(f"Transcript length: {len(transcript)} characters, {len(transcript.split())} words")
-        
+
         # Calculate estimated tokens (rough approximation: 1 token ≈ 4 characters)
         estimated_input_tokens = len(transcript) // 4
         self._debug_log(f"Estimated input tokens: ~{estimated_input_tokens}")
-        
-        # Get prompts from Langfuse Prompt Management
-        system_prompt_text = ""
-        user_prompt_text = ""
+
+        # Get chat prompt from Langfuse Prompt Management
+        messages = []
         langfuse_prompt = None  # For linking prompt to observation
 
         try:
             if self.langfuse_enabled and self.langfuse:
-                self._debug_log("📋 Fetching prompts from Langfuse Prompt Management...")
+                self._debug_log("📋 Fetching chat prompt from Langfuse Prompt Management...")
 
-                # Get system prompt
-                system_prompt_obj = self.langfuse.get_prompt("podcast-analyzer-system", label="production")
-                system_prompt_text = system_prompt_obj.prompt
+                # Get chat prompt and compile with variables
+                prompt_obj = self.langfuse.get_prompt("podcast-summarization", label="production", type="chat")
 
-                # Get and compile user prompt with variables
-                user_prompt_obj = self.langfuse.get_prompt("podcast-summarization-user", label="production")
-                user_prompt_text = user_prompt_obj.compile(
+                # Compile the chat prompt with variables (returns array of messages)
+                messages = prompt_obj.compile(
                     title=title,
                     transcript=transcript
                 )
 
                 # Store prompt object for automatic linking
-                langfuse_prompt = user_prompt_obj
+                langfuse_prompt = prompt_obj
 
-                self._debug_log("✅ Successfully loaded prompts from Langfuse")
+                self._debug_log(f"✅ Successfully loaded chat prompt from Langfuse ({len(messages)} messages)")
             else:
                 raise Exception("Langfuse not enabled, using fallback prompts")
-                
+
         except Exception as e:
-            self._debug_log(f"⚠️  Failed to load Langfuse prompts, using fallback: {str(e)}")
-            # Fallback to hardcoded prompts
-            system_prompt_text = """You are a professional podcast analyst. 
-Your job is to create structured summaries of cleaned podcast transcripts. 
+            self._debug_log(f"⚠️  Failed to load Langfuse chat prompt, using fallback: {str(e)}")
+            # Fallback to hardcoded messages
+            messages = [
+                {
+                    "role": "system",
+                    "content": """You are a professional podcast analyst.
+Your job is to create structured summaries of cleaned podcast transcripts.
 Your summaries must adapt to the type of content:
 
 1. If the episode is about PRODUCT MANAGEMENT, AI, TOOLS, or OPERATIONS:
@@ -97,9 +97,10 @@ Across all types:
 - Avoid prescriptive "to-dos" for the user.
 - Quotes should be concise and memorable.
 - Companies/people should always be noted with context."""
-            
-            user_prompt_text = f"""
-Please analyze this podcast transcript and produce a structured summary with two layers:
+                },
+                {
+                    "role": "user",
+                    "content": f"""Please analyze this podcast transcript and produce a structured summary with two layers:
 
 ---
 
@@ -123,28 +124,28 @@ Please analyze this podcast transcript and produce a structured summary with two
 
 IF PRODUCT/AI/OPERATIONAL:
   **Frameworks & Methodologies:**
-  
+
   • [Framework/method: explanation or link if vague]
 
   **Tools & Tech Stacks:**
-  
+
   • [Tool/tech: context of use]
 
   **Key Insights:**
-  
+
   • [Insight phrased for product/AI relevance]
 
 IF STRATEGY/VC/TRENDS:
   **Market & Strategic Insights:**
-  
+
   • [Trend/insight: why it matters]
 
   **Investment/Startup Signals:**
-  
+
   • [Company/sector: context + thesis]
 
   **Ecosystem & Future Outlook:**
-  
+
   • [Broader implications or where to learn more]
 
 **Actionable Quotes:**
@@ -182,56 +183,49 @@ WRONG FORMAT:
 • First bullet point here • Second bullet point here
 
 Here is the transcript:
-{transcript}
-Here is the transcript:
-{transcript}
-        """
-        
+{transcript}"""
+                }
+            ]
+
         try:
             self._debug_log("🚀 Sending request to OpenAI API...")
             self._debug_log("📡 Model: gpt-4o-mini (fast & free)")
             self._debug_log("⚙️  Temperature: 0.7 (balanced creativity)")
             self._debug_log("📝 Max output tokens: 2000")
-            
+
             start_time = time.time()
-            
-            # Prepare messages using the prompt management system
-            messages = [
-                {"role": "system", "content": system_prompt_text},
-                {"role": "user", "content": user_prompt_text}
-            ]
-            
+
             # Use Langfuse OpenAI wrapper (automatic tracing + prompt linking)
             response = openai.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=messages,
                 temperature=0.7,
                 max_tokens=2000,
-                langfuse_prompt=langfuse_prompt  # Links prompt to observation
+                langfuse_prompt=langfuse_prompt  # Links chat prompt to observation
             )
 
             # Log prompt source for debugging
-            prompt_source = "langfuse_prompt_management" if langfuse_prompt else "fallback"
-            self._debug_log(f"🔗 Used prompts from: {prompt_source}")
-            
+            prompt_source = "langfuse_chat_prompt" if langfuse_prompt else "fallback"
+            self._debug_log(f"🔗 Used prompt from: {prompt_source}")
+
             elapsed = time.time() - start_time
-            
+
             # Extract usage information
             usage = response.usage
             input_tokens = usage.prompt_tokens
             output_tokens = usage.completion_tokens
             total_tokens = usage.total_tokens
-            
+
             self._debug_log(f"✅ OpenAI summarization completed in {elapsed:.2f}s")
             self._debug_log(f"📊 Token usage: {input_tokens} input + {output_tokens} output = {total_tokens} total")
             self._debug_log(f"⚡ Processing speed: {total_tokens/elapsed:.1f} tokens/second")
-            
+
             summary = response.choices[0].message.content
             self._debug_log(f"📝 Summary generated: {len(summary)} characters")
             self._debug_log(f"📉 Summary ratio: {len(summary)/len(transcript)*100:.1f}% of transcript length")
 
             return summary
-            
+
         except Exception as e:
             self._debug_log(f"❌ Error with OpenAI summarization: {str(e)}")
             raise RuntimeError(f"Failed to generate summary with OpenAI: {str(e)}")

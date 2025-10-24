@@ -15,50 +15,59 @@ load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent))
 
 def create_podcast_prompts():
-    """Create prompts for podcast summarization in Langfuse"""
-    
+    """Create chat prompts for podcast analysis in Langfuse (best practice: combine system + user)"""
+
     try:
         from langfuse import Langfuse
-        
+
         langfuse = Langfuse(
             secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
             public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
             host=os.getenv('LANGFUSE_HOST', 'http://localhost:4000')
         )
-        
-        print("🚀 Creating Langfuse prompts for podcast summarization...")
 
-        # 1. Transcript Cleaner System Prompt
-        cleaner_system_prompt = langfuse.create_prompt(
-            name="podcast-transcript-cleaner-system",
-            prompt="""You are a professional transcript cleaner.
+        print("🚀 Creating Langfuse chat prompts for podcast analysis...")
+        print("📋 Using best practice: combining system + user messages into chat prompts")
+
+        # 1. Transcript Cleaner Chat Prompt (system + user combined)
+        cleaner_prompt = langfuse.create_prompt(
+            name="podcast-transcript-cleaner",
+            prompt=[
+                {
+                    "role": "system",
+                    "content": """You are a professional transcript cleaner.
 Your task is to remove filler words (um, ah, like, you know, etc.)
 and small-talk fluff while preserving all technical, business, and conversational content.
-Do not shorten or summarize — keep the transcript length and meaning intact.""",
-            labels=["production", "podcast", "cleaner", "system"],
-            type="text"
-        )
-        print("✅ Created cleaner system prompt: podcast-transcript-cleaner-system")
-
-        # 2. Transcript Cleaner User Prompt Template
-        cleaner_user_prompt = langfuse.create_prompt(
-            name="podcast-transcript-cleaner-user",
-            prompt="""Clean the following podcast transcript while preserving all content.
+Do not shorten or summarize — keep the transcript length and meaning intact."""
+                },
+                {
+                    "role": "user",
+                    "content": """Clean the following podcast transcript while preserving all content.
 Keep the same length, remove fillers and irrelevant small-talk,
 and make sure technical/business details remain untouched.
 
 Transcript:
-{{raw_transcript}}""",
-            labels=["production", "podcast", "cleaner", "user"],
-            type="text"
+{{raw_transcript}}"""
+                }
+            ],
+            labels=["production", "podcast", "cleaner"],
+            type="chat",
+            config={
+                "model": "gpt-4o-mini",
+                "temperature": 0.3,
+                "max_tokens": 4000
+            }
         )
-        print("✅ Created cleaner user prompt: podcast-transcript-cleaner-user")
+        print("✅ Created cleaner chat prompt: podcast-transcript-cleaner")
 
-        # 3. Summarizer System Prompt
-        system_prompt = langfuse.create_prompt(
-            name="podcast-analyzer-system",
-            prompt="""You are a professional podcast analyst. 
-Your job is to create structured summaries of cleaned podcast transcripts. 
+        # 2. Summarization Chat Prompt (system + user combined)
+        summarizer_prompt = langfuse.create_prompt(
+            name="podcast-summarization",
+            prompt=[
+                {
+                    "role": "system",
+                    "content": """You are a professional podcast analyst.
+Your job is to create structured summaries of cleaned podcast transcripts.
 Your summaries must adapt to the type of content:
 
 1. If the episode is about PRODUCT MANAGEMENT, AI, TOOLS, or OPERATIONS:
@@ -78,16 +87,11 @@ Across all types:
 - Provide two layers of summary: quick TL;DR and detailed notes.
 - Avoid prescriptive "to-dos" for the user.
 - Quotes should be concise and memorable.
-- Companies/people should always be noted with context.""",
-            labels=["production", "podcast", "system"],
-            type="text"
-        )
-        print("✅ Created summarizer system prompt: podcast-analyzer-system")
-
-        # 4. Summarizer User Prompt Template
-        user_prompt = langfuse.create_prompt(
-            name="podcast-summarization-user",
-            prompt="""Please analyze this podcast transcript and produce a structured summary with two layers:
+- Companies/people should always be noted with context."""
+                },
+                {
+                    "role": "user",
+                    "content": """Please analyze this podcast transcript and produce a structured summary with two layers:
 
 ---
 
@@ -111,28 +115,28 @@ Across all types:
 
 IF PRODUCT/AI/OPERATIONAL:
   **Frameworks & Methodologies:**
-  
+
   • [Framework/method: explanation or link if vague]
 
   **Tools & Tech Stacks:**
-  
+
   • [Tool/tech: context of use]
 
   **Key Insights:**
-  
+
   • [Insight phrased for product/AI relevance]
 
 IF STRATEGY/VC/TRENDS:
   **Market & Strategic Insights:**
-  
+
   • [Trend/insight: why it matters]
 
   **Investment/Startup Signals:**
-  
+
   • [Company/sector: context + thesis]
 
   **Ecosystem & Future Outlook:**
-  
+
   • [Broader implications or where to learn more]
 
 **Actionable Quotes:**
@@ -170,93 +174,72 @@ WRONG FORMAT:
 • First bullet point here • Second bullet point here
 
 Here is the transcript:
-{{transcript}}""",
-            labels=["production", "podcast", "user"],
-            type="text"
-        )
-        print("✅ Created summarizer user prompt: podcast-summarization-user")
-
-        # 5. Chat Messages Template
-        chat_prompt = langfuse.create_prompt(
-            name="podcast-chat-template",
-            prompt=[
-                {
-                    "role": "system",
-                    "content": "{{system_prompt}}"
-                },
-                {
-                    "role": "user", 
-                    "content": "{{user_prompt}}"
+{{transcript}}"""
                 }
             ],
-            labels=["production", "podcast", "chat"],
-            type="chat"
+            labels=["production", "podcast", "summarization"],
+            type="chat",
+            config={
+                "model": "gpt-4o-mini",
+                "temperature": 0.7,
+                "max_tokens": 2000
+            }
         )
-        print("✅ Created chat template: podcast-chat-template")
+        print("✅ Created summarization chat prompt: podcast-summarization")
 
-        # 6. Quick Summary Prompt (for shorter summaries)
-        quick_prompt = langfuse.create_prompt(
-            name="podcast-quick-summary",
-            prompt="""Create a concise summary of this podcast episode:
-
-**Title:** {{title}}
-
-**Quick Summary (3-5 bullets):**
-• [Key takeaway 1]
-• [Key takeaway 2] 
-• [Key takeaway 3]
-
-**Main Topics:** [List 2-3 core topics]
-
-**Notable Mentions:** [Key people/companies mentioned]
-
-Transcript: {{transcript}}""",
-            labels=["production", "podcast", "quick"],
-            type="text"
-        )
-        print("✅ Created quick summary prompt: podcast-quick-summary")
-
-        print(f"\n🎉 Successfully created 6 prompts in Langfuse!")
+        print(f"\n🎉 Successfully created 2 chat prompts in Langfuse!")
         print(f"📊 View them at: {os.getenv('LANGFUSE_HOST', 'https://cloud.langfuse.com')}/prompts")
-        
+        print(f"\n💡 Benefits of chat prompts:")
+        print(f"   • System + user messages versioned together")
+        print(f"   • Easier evaluation and A/B testing")
+        print(f"   • Proper observation linking")
+        print(f"   • Model config stored with prompt")
+
         return True
-        
+
     except Exception as e:
         print(f"❌ Failed to create prompts: {e}")
         return False
 
 def test_prompt_retrieval():
-    """Test retrieving and compiling prompts"""
-    
+    """Test retrieving and compiling chat prompts"""
+
     try:
         from langfuse import Langfuse
-        
+
         langfuse = Langfuse(
             secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
             public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
             host=os.getenv('LANGFUSE_HOST', 'http://localhost:4000')
         )
-        
-        print("\n🔍 Testing prompt retrieval...")
-        
-        # Test retrieving system prompt
-        system_prompt = langfuse.get_prompt("podcast-analyzer-system")
-        print(f"✅ Retrieved system prompt: {system_prompt.prompt[:50]}...")
-        
-        # Test retrieving and compiling user prompt
-        user_prompt = langfuse.get_prompt("podcast-summarization-user")
-        compiled_user = user_prompt.compile(
+
+        print("\n🔍 Testing chat prompt retrieval and compilation...")
+
+        # Test 1: Retrieve and compile cleaner chat prompt
+        cleaner_prompt = langfuse.get_prompt("podcast-transcript-cleaner", type="chat")
+        compiled_cleaner = cleaner_prompt.compile(
+            raw_transcript="Um, so like, this is a test transcript, you know, about AI..."
+        )
+        print(f"✅ Retrieved cleaner chat prompt with {len(cleaner_prompt.prompt)} messages")
+        print(f"   Compiled to {len(compiled_cleaner)} messages for OpenAI API")
+
+        # Test 2: Retrieve and compile summarization chat prompt
+        summarizer_prompt = langfuse.get_prompt("podcast-summarization", type="chat")
+        compiled_summarizer = summarizer_prompt.compile(
             title="Test Podcast Episode",
             transcript="This is a test transcript about AI and product management..."
         )
-        print(f"✅ Compiled user prompt: {compiled_user[:80]}...")
-        
-        # Test chat template
-        chat_template = langfuse.get_prompt("podcast-chat-template")
-        print(f"✅ Retrieved chat template with {len(chat_template.prompt)} messages")
-        
+        print(f"✅ Retrieved summarization chat prompt with {len(summarizer_prompt.prompt)} messages")
+        print(f"   Compiled to {len(compiled_summarizer)} messages for OpenAI API")
+
+        # Test 3: Verify config is included
+        if hasattr(cleaner_prompt, 'config'):
+            print(f"✅ Cleaner prompt includes config: {cleaner_prompt.config}")
+        if hasattr(summarizer_prompt, 'config'):
+            print(f"✅ Summarizer prompt includes config: {summarizer_prompt.config}")
+
         return True
-        
+
     except Exception as e:
         print(f"❌ Failed to test prompts: {e}")
         return False
@@ -286,10 +269,10 @@ def main():
     
     print(f"\n🎊 Prompt Management Setup Complete!")
     print(f"📋 Next steps:")
-    print(f"1. Visit {os.getenv('LANGFUSE_HOST', 'https://cloud.langfuse.com')}/prompts to see your prompts")
+    print(f"1. Visit {os.getenv('LANGFUSE_HOST', 'https://cloud.langfuse.com')}/prompts to see your chat prompts")
     print(f"2. Try editing a prompt version in the Langfuse UI")
     print(f"3. Run your podcast analyzer to see prompts in action")
-    print(f"4. Check the 'Generations' tab to see prompt usage")
+    print(f"4. Check prompt observation counts - should now show linked generations")
     
     return True
 
