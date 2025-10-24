@@ -56,9 +56,17 @@ def _analyze_episode_with_tracing(url, force):
             return {"status": "already_processed", "url": url}
 
         # Step 1: Download
+        # Get the original title from placeholder before download
+        original_episode = db.get_episode(url)
+        original_title = original_episode.get('title', '') if original_episode else ''
+        
         episode_data = downloader.download(url)
         if not episode_data:
             raise RuntimeError("Failed to download episode")
+        
+        # Preserve the original RSS title if it exists (don't use the downloaded file's title)
+        if original_title:
+            episode_data['title'] = original_title
 
         # Step 2: Transcribe (or load existing)
         transcript_path = transcriber.get_transcript_path(episode_data['title'])
