@@ -100,7 +100,7 @@ class PodcastDownloader:
                     return {
                         'title': title,
                         'duration': final_duration,
-                        'file_path': str(file_path.relative_to(self.audio_dir.parent)),
+                        'file_path': f'audio/{file_path.name}',
                         'url': url
                     }
                 
