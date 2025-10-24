@@ -79,8 +79,9 @@ def _analyze_episode_with_tracing(url, force):
 
         # Set Langfuse session/trace metadata using official API
         try:
-            from langfuse import update_current_trace
-            update_current_trace(
+            from langfuse import get_client
+            langfuse_client = get_client()
+            langfuse_client.update_current_trace(
                 session_id=session_id,
                 user_id="podcast_analyzer",
                 tags=["podcast", "analysis"],
