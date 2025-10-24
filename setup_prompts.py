@@ -27,8 +27,34 @@ def create_podcast_prompts():
         )
         
         print("🚀 Creating Langfuse prompts for podcast summarization...")
-        
-        # 1. System Prompt for Podcast Analysis
+
+        # 1. Transcript Cleaner System Prompt
+        cleaner_system_prompt = langfuse.create_prompt(
+            name="podcast-transcript-cleaner-system",
+            prompt="""You are a professional transcript cleaner.
+Your task is to remove filler words (um, ah, like, you know, etc.)
+and small-talk fluff while preserving all technical, business, and conversational content.
+Do not shorten or summarize — keep the transcript length and meaning intact.""",
+            labels=["production", "podcast", "cleaner", "system"],
+            type="text"
+        )
+        print("✅ Created cleaner system prompt: podcast-transcript-cleaner-system")
+
+        # 2. Transcript Cleaner User Prompt Template
+        cleaner_user_prompt = langfuse.create_prompt(
+            name="podcast-transcript-cleaner-user",
+            prompt="""Clean the following podcast transcript while preserving all content.
+Keep the same length, remove fillers and irrelevant small-talk,
+and make sure technical/business details remain untouched.
+
+Transcript:
+{{raw_transcript}}""",
+            labels=["production", "podcast", "cleaner", "user"],
+            type="text"
+        )
+        print("✅ Created cleaner user prompt: podcast-transcript-cleaner-user")
+
+        # 3. Summarizer System Prompt
         system_prompt = langfuse.create_prompt(
             name="podcast-analyzer-system",
             prompt="""You are a professional podcast analyst. 
@@ -56,9 +82,9 @@ Across all types:
             labels=["production", "podcast", "system"],
             type="text"
         )
-        print("✅ Created system prompt: podcast-analyzer-system")
-        
-        # 2. User Prompt Template for Podcast Summarization
+        print("✅ Created summarizer system prompt: podcast-analyzer-system")
+
+        # 4. Summarizer User Prompt Template
         user_prompt = langfuse.create_prompt(
             name="podcast-summarization-user",
             prompt="""Please analyze this podcast transcript and produce a structured summary with two layers:
@@ -148,9 +174,9 @@ Here is the transcript:
             labels=["production", "podcast", "user"],
             type="text"
         )
-        print("✅ Created user prompt: podcast-summarization-user")
-        
-        # 3. Chat Messages Template
+        print("✅ Created summarizer user prompt: podcast-summarization-user")
+
+        # 5. Chat Messages Template
         chat_prompt = langfuse.create_prompt(
             name="podcast-chat-template",
             prompt=[
@@ -167,8 +193,8 @@ Here is the transcript:
             type="chat"
         )
         print("✅ Created chat template: podcast-chat-template")
-        
-        # 4. Quick Summary Prompt (for shorter summaries)
+
+        # 6. Quick Summary Prompt (for shorter summaries)
         quick_prompt = langfuse.create_prompt(
             name="podcast-quick-summary",
             prompt="""Create a concise summary of this podcast episode:
@@ -189,9 +215,9 @@ Transcript: {{transcript}}""",
             type="text"
         )
         print("✅ Created quick summary prompt: podcast-quick-summary")
-        
-        print(f"\n🎉 Successfully created 4 prompts in Langfuse!")
-        print(f"📊 View them at: http://localhost:4000/prompts")
+
+        print(f"\n🎉 Successfully created 6 prompts in Langfuse!")
+        print(f"📊 View them at: {os.getenv('LANGFUSE_HOST', 'https://cloud.langfuse.com')}/prompts")
         
         return True
         
@@ -260,7 +286,7 @@ def main():
     
     print(f"\n🎊 Prompt Management Setup Complete!")
     print(f"📋 Next steps:")
-    print(f"1. Visit http://localhost:4000/prompts to see your prompts")
+    print(f"1. Visit {os.getenv('LANGFUSE_HOST', 'https://cloud.langfuse.com')}/prompts to see your prompts")
     print(f"2. Try editing a prompt version in the Langfuse UI")
     print(f"3. Run your podcast analyzer to see prompts in action")
     print(f"4. Check the 'Generations' tab to see prompt usage")

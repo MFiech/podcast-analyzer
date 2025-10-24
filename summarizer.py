@@ -4,27 +4,20 @@ Podcast summarization using OpenAI
 import time
 import os
 from datetime import datetime
-from openai import OpenAI
+from langfuse.openai import openai  # Langfuse OpenAI wrapper for automatic tracing
 from langfuse import Langfuse, observe
 
 class PodcastSummarizer:
     def __init__(self):
         self.debug = True
-        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        if not self.openai_client.api_key:
-            raise ValueError("OPENAI_API_KEY environment variable not set")
-        
-        # Initialize Langfuse for tracing (if enabled)
+        # Langfuse OpenAI wrapper is automatically configured via env vars
+        # No manual OpenAI client initialization needed
+
+        # Initialize Langfuse client for prompt management
         self.langfuse_enabled = os.getenv('LANGFUSE_ENABLED', 'true').lower() == 'true'
         if self.langfuse_enabled:
             try:
-                self.langfuse = Langfuse(
-                    secret_key=os.getenv('LANGFUSE_SECRET_KEY'),
-                    public_key=os.getenv('LANGFUSE_PUBLIC_KEY'),
-                    host=os.getenv('LANGFUSE_HOST', 'http://localhost:4000'),
-                    flush_at=1,  # Flush after 1 event instead of batching
-                    flush_interval=1  # Flush every 1 second
-                )
+                self.langfuse = Langfuse()
             except Exception as e:
                 self._debug_log(f"⚠️  Warning: Failed to initialize Langfuse: {str(e)}")
                 self.langfuse_enabled = False
@@ -38,46 +31,6 @@ class PodcastSummarizer:
             timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp}] SUMMARIZER: {message}")
     
-    def summarize_with_trace(self, transcript, title="Podcast Episode", parent_span=None):
-        """Generate summary with proper Langfuse trace linking"""
-        if parent_span and self.langfuse_enabled and self.langfuse:
-            # Create a span for the summarization step under the parent span
-            with self.langfuse.start_as_current_span(
-                name="openai_summarization",
-                input={
-                    "transcript_length": len(transcript),
-                    "title": title,
-                    "prompt_source": "langfuse_managed"
-                },
-                metadata={
-                    "step": 4,
-                    "model": "gpt-4o-mini",
-                    "temperature": 0.7,
-                    "max_tokens": 2000,
-                    "type": "generation"
-                }
-            ) as summary_span:
-                # Get the actual summary
-                summary = self._do_summarize(transcript, title)
-                
-                # Update the span with the result
-                summary_span.update(
-                    output={
-                        "summary": summary,
-                        "summary_length": len(summary),
-                        "compression_ratio": f"{len(summary)/len(transcript)*100:.1f}%"
-                    }
-                )
-                
-                return summary
-        else:
-            # Fallback to regular method
-            return self.summarize(transcript, title)
-
-    def _do_summarize(self, transcript, title="Podcast Episode"):
-        """Internal method that does the actual summarization work"""
-        return self._internal_summarize(transcript, title)
-
     @observe(as_type="generation", name="podcast_summarization")
     def summarize(self, transcript, title="Podcast Episode"):
         """Generate summary from transcript using OpenAI API with Langfuse Prompt Management"""
@@ -95,22 +48,26 @@ class PodcastSummarizer:
         # Get prompts from Langfuse Prompt Management
         system_prompt_text = ""
         user_prompt_text = ""
-        
+        langfuse_prompt = None  # For linking prompt to observation
+
         try:
             if self.langfuse_enabled and self.langfuse:
                 self._debug_log("📋 Fetching prompts from Langfuse Prompt Management...")
-                
+
                 # Get system prompt
-                system_prompt = self.langfuse.get_prompt("podcast-analyzer-system", label="production")
-                system_prompt_text = system_prompt.prompt
-                
+                system_prompt_obj = self.langfuse.get_prompt("podcast-analyzer-system", label="production")
+                system_prompt_text = system_prompt_obj.prompt
+
                 # Get and compile user prompt with variables
-                user_prompt = self.langfuse.get_prompt("podcast-summarization-user", label="production")
-                user_prompt_text = user_prompt.compile(
+                user_prompt_obj = self.langfuse.get_prompt("podcast-summarization-user", label="production")
+                user_prompt_text = user_prompt_obj.compile(
                     title=title,
                     transcript=transcript
                 )
-                
+
+                # Store prompt object for automatic linking
+                langfuse_prompt = user_prompt_obj
+
                 self._debug_log("✅ Successfully loaded prompts from Langfuse")
             else:
                 raise Exception("Langfuse not enabled, using fallback prompts")
@@ -244,17 +201,17 @@ Here is the transcript:
                 {"role": "user", "content": user_prompt_text}
             ]
             
-            # Use OpenAI API with managed prompts
-            # The @observe decorator will automatically track this as a generation
-            response = self.openai_client.chat.completions.create(
-                model="gpt-4o-mini",  # Fast and free
+            # Use Langfuse OpenAI wrapper (automatic tracing + prompt linking)
+            response = openai.chat.completions.create(
+                model="gpt-4o-mini",
                 messages=messages,
                 temperature=0.7,
-                max_tokens=2000
+                max_tokens=2000,
+                langfuse_prompt=langfuse_prompt  # Links prompt to observation
             )
-            
+
             # Log prompt source for debugging
-            prompt_source = "langfuse_prompt_management" if "podcast analyst" in system_prompt_text else "fallback"
+            prompt_source = "langfuse_prompt_management" if langfuse_prompt else "fallback"
             self._debug_log(f"🔗 Used prompts from: {prompt_source}")
             
             elapsed = time.time() - start_time
@@ -272,15 +229,7 @@ Here is the transcript:
             summary = response.choices[0].message.content
             self._debug_log(f"📝 Summary generated: {len(summary)} characters")
             self._debug_log(f"📉 Summary ratio: {len(summary)/len(transcript)*100:.1f}% of transcript length")
-            
-            # Flush traces to Langfuse (with error handling)
-            if self.langfuse_enabled and self.langfuse:
-                try:
-                    self.langfuse.flush()
-                except Exception as e:
-                    self._debug_log(f"⚠️  Warning: Failed to flush traces to Langfuse: {str(e)}")
-                    # Don't fail the entire operation if tracing fails
-            
+
             return summary
             
         except Exception as e:
