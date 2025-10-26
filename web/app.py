@@ -243,9 +243,57 @@ def remove_feed(feed_id):
 # Feeder Container Control Routes
 @app.route('/api/feeder/status')
 def feeder_status_api():
-    """API endpoint to get feeder container status."""
-    status = get_feeder_status()
-    return jsonify({'status': status})
+    """API endpoint to get feeder container status and last run information."""
+    from datetime import datetime, timezone
+
+    # Get Docker container status
+    container_status = get_feeder_status()
+
+    # Get database feeder status
+    db = PodcastDB()
+    feeder_data = db.get_feeder_status()
+
+    response = {
+        'status': container_status,
+        'is_running': feeder_data.get('is_running', False),
+        'last_run_status': feeder_data.get('last_run_status', 'never_run'),
+        'last_run_time': None,
+        'last_run_time_readable': None,
+        'next_run_in_minutes': None
+    }
+
+    # Calculate last run time info
+    last_run_time = feeder_data.get('last_run_time')
+    if last_run_time:
+        response['last_run_time'] = last_run_time.isoformat()
+
+        # Calculate time ago in human-readable format
+        now = datetime.now(timezone.utc)
+        if last_run_time.tzinfo is None:
+            last_run_time = last_run_time.replace(tzinfo=timezone.utc)
+
+        time_diff = now - last_run_time
+        minutes_ago = int(time_diff.total_seconds() / 60)
+        hours_ago = int(minutes_ago / 60)
+
+        if minutes_ago < 1:
+            response['last_run_time_readable'] = 'Just now'
+        elif minutes_ago < 60:
+            response['last_run_time_readable'] = f'{minutes_ago} minute{"s" if minutes_ago != 1 else ""} ago'
+        elif hours_ago < 24:
+            response['last_run_time_readable'] = f'{hours_ago} hour{"s" if hours_ago != 1 else ""} ago'
+        else:
+            days_ago = int(hours_ago / 24)
+            response['last_run_time_readable'] = f'{days_ago} day{"s" if days_ago != 1 else ""} ago'
+
+        # Calculate next run time (assuming hourly schedule)
+        interval_minutes = int(os.getenv('FEEDER_INTERVAL_MINUTES', '60'))
+        minutes_since_last_run = int(time_diff.total_seconds() / 60)
+        next_run_minutes = interval_minutes - minutes_since_last_run
+        if next_run_minutes > 0:
+            response['next_run_in_minutes'] = next_run_minutes
+
+    return jsonify(response)
 
 @app.route('/api/feeder/start', methods=['POST'])
 def start_feeder_api():

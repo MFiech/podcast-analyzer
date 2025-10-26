@@ -21,11 +21,16 @@
                 {% else %}
                     <a href="{{ url_for('index', include_hidden='true') }}" class="button secondary">Show Deleted Episodes</a>
                 {% endif %}
-                <button id="feeder-toggle" class="button {% if feeder_status == 'running' %}danger{% elif feeder_status == 'recently_ran' %}warning{% else %}success{% endif %}" 
+                <button id="feeder-toggle" class="button {% if feeder_status == 'running' %}danger{% elif feeder_status == 'recently_ran' %}warning{% else %}success{% endif %}"
                         onclick="toggleFeeder()">
                     {% if feeder_status == 'running' %}Turn off Feeder{% elif feeder_status == 'recently_ran' %}Feeder Just Ran{% else %}Turn on Feeder{% endif %}
                 </button>
             </div>
+        </div>
+        <div class="feeder-status-info" style="padding: 10px; margin-bottom: 10px; background-color: #f5f5f5; border-radius: 5px; font-size: 0.9em;">
+            <strong>RSS Feed Processing:</strong>
+            <span id="last-run-info">Loading...</span>
+            <span id="next-run-info" style="margin-left: 15px;"></span>
         </div>
         <table>
             <thead>
@@ -197,8 +202,30 @@
             }, 3000);
         }
         
+        // Update feeder status information
+        function updateFeederStatusInfo(data) {
+            const lastRunInfo = document.getElementById('last-run-info');
+            const nextRunInfo = document.getElementById('next-run-info');
+
+            if (data.last_run_time_readable) {
+                const statusEmoji = data.last_run_status === 'success' ? '✅' : '❌';
+                const statusText = data.last_run_status === 'success' ? 'Success' : 'Failed';
+                lastRunInfo.textContent = `Last Run: ${data.last_run_time_readable} (${statusText} ${statusEmoji})`;
+            } else {
+                lastRunInfo.textContent = 'Last Run: Never';
+            }
+
+            if (data.next_run_in_minutes && data.next_run_in_minutes > 0) {
+                nextRunInfo.textContent = `| Next Run: in ${data.next_run_in_minutes} minute${data.next_run_in_minutes !== 1 ? 's' : ''}`;
+            } else if (data.is_running) {
+                nextRunInfo.textContent = '| Running now...';
+            } else {
+                nextRunInfo.textContent = '';
+            }
+        }
+
         // Check feeder status every 10 seconds
-        setInterval(async () => {
+        async function checkFeederStatus() {
             try {
                 const response = await fetch('/api/feeder/status');
                 const result = await response.json();
@@ -206,10 +233,17 @@
                     feederStatus = result.status;
                     updateFeederButton();
                 }
+                updateFeederStatusInfo(result);
             } catch (error) {
                 console.error('Error checking feeder status:', error);
             }
-        }, 10000);
+        }
+
+        // Initial check
+        checkFeederStatus();
+
+        // Check every 10 seconds
+        setInterval(checkFeederStatus, 10000);
         
         // Dropdown functionality
         function toggleDropdown(dropdownId) {

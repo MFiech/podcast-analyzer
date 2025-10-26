@@ -13,6 +13,7 @@ class PodcastDB:
         self.db = self.client[db_name]
         self.episodes = self.db.episodes
         self.feeds = self.db.feeds
+        self.feeder_status = self.db.feeder_status
         
     def create_placeholder(self, url, title="", feed_id=None, feed_title=None):
         """Create a placeholder record for a new episode."""
@@ -191,4 +192,48 @@ class PodcastDB:
         return self.feeds.update_one(
             {'_id': ObjectId(feed_id)},
             {'$set': update_data}
+        )
+
+    # Feeder Status Methods
+    def get_feeder_status(self):
+        """Get the current feeder status."""
+        status = self.feeder_status.find_one({'_id': 'feeder_main'})
+        if not status:
+            # Initialize default status if it doesn't exist
+            default_status = {
+                '_id': 'feeder_main',
+                'last_run_time': None,
+                'last_run_status': 'never_run',
+                'is_running': False,
+                'created_at': datetime.utcnow()
+            }
+            self.feeder_status.insert_one(default_status)
+            return default_status
+        return status
+
+    def update_feeder_status(self, is_running=None, status='success', error_message=None):
+        """Update the feeder status."""
+        update_data = {
+            'updated_at': datetime.utcnow()
+        }
+
+        if is_running is not None:
+            update_data['is_running'] = is_running
+
+        if not is_running and is_running is not None:
+            # Feeder finished running, update last run time and status
+            update_data['last_run_time'] = datetime.utcnow()
+            update_data['last_run_status'] = status
+
+        if error_message:
+            update_data['last_error'] = error_message
+        elif 'last_error' in update_data:
+            # Clear error if status is success
+            if status == 'success':
+                update_data['last_error'] = None
+
+        return self.feeder_status.update_one(
+            {'_id': 'feeder_main'},
+            {'$set': update_data},
+            upsert=True
         )
