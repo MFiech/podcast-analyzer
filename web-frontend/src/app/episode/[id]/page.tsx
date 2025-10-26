@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 const statusConfig = {
   completed: { label: 'Completed', color: 'bg-green-100 text-green-800' },
@@ -69,7 +70,7 @@ export default function EpisodeDetailPage() {
   };
 
   return (
-    <div className="pb-40">
+    <div className="pb-40 md:pb-0">
       <div className="sticky top-0 md:top-16 bg-white border-b z-30">
         <div className="px-4 py-3 max-w-2xl mx-auto flex items-center justify-between">
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10 -ml-2">
@@ -96,7 +97,11 @@ export default function EpisodeDetailPage() {
 
         {episode.status === 'completed' && episode.summary ? (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">{episode.summary}</p>
+            <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 text-sm leading-relaxed">
+              <ReactMarkdown>
+                {episode.summary}
+              </ReactMarkdown>
+            </div>
           </div>
         ) : episode.status === 'processing' ? (
           <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
@@ -109,10 +114,10 @@ export default function EpisodeDetailPage() {
         ) : null}
 
         {episode.transcript && (
-          <Accordion type="single" collapsible defaultValue="item-1" className="mb-6">
+          <Accordion type="single" collapsible className="mb-24 md:mb-6">
             <AccordionItem value="item-1">
               <AccordionTrigger className="hover:no-underline">
-                <span className="font-semibold">Full Transcript</span>
+                <h2 className="text-lg font-semibold">Full Transcript</h2>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
@@ -125,10 +130,12 @@ export default function EpisodeDetailPage() {
       </div>
 
       {(episode.audio_path || episode.file_path) && (
-        <AudioPlayer
-          audioUrl={`${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${episode.audio_path || episode.file_path}`}
-          title={episode.title}
-        />
+        <div className="fixed bottom-0 left-0 right-0 md:static bg-white border-t z-40">
+          <AudioPlayer
+            audioUrl={`${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${episode.audio_path || episode.file_path}`}
+            title={episode.title}
+          />
+        </div>
       )}
     </div>
   );
