@@ -73,6 +73,17 @@ def stop_feeder():
     except Exception as e:
         return False, f"Error stopping feeder: {e}"
 
+def restart_feeder():
+    """Restart the feeder container to trigger immediate feed processing."""
+    try:
+        container = docker_client.containers.get('podcast_feeder')
+        container.restart()
+        return True, "Feeder restarted - checking for new episodes"
+    except docker.errors.NotFound:
+        return False, "Feeder container not found"
+    except Exception as e:
+        return False, f"Error restarting feeder: {e}"
+
 @app.template_filter('markdown')
 def markdown_filter(text):
     """Convert markdown text to HTML"""
@@ -243,9 +254,57 @@ def remove_feed(feed_id):
 # Feeder Container Control Routes
 @app.route('/api/feeder/status')
 def feeder_status_api():
-    """API endpoint to get feeder container status."""
-    status = get_feeder_status()
-    return jsonify({'status': status})
+    """API endpoint to get feeder container status and last run information."""
+    from datetime import datetime, timezone
+
+    # Get Docker container status
+    container_status = get_feeder_status()
+
+    # Get database feeder status
+    db = PodcastDB()
+    feeder_data = db.get_feeder_status()
+
+    response = {
+        'status': container_status,
+        'is_running': feeder_data.get('is_running', False),
+        'last_run_status': feeder_data.get('last_run_status', 'never_run'),
+        'last_run_time': None,
+        'last_run_time_readable': None,
+        'next_run_in_minutes': None
+    }
+
+    # Calculate last run time info
+    last_run_time = feeder_data.get('last_run_time')
+    if last_run_time:
+        response['last_run_time'] = last_run_time.isoformat()
+
+        # Calculate time ago in human-readable format
+        now = datetime.now(timezone.utc)
+        if last_run_time.tzinfo is None:
+            last_run_time = last_run_time.replace(tzinfo=timezone.utc)
+
+        time_diff = now - last_run_time
+        minutes_ago = int(time_diff.total_seconds() / 60)
+        hours_ago = int(minutes_ago / 60)
+
+        if minutes_ago < 1:
+            response['last_run_time_readable'] = 'Just now'
+        elif minutes_ago < 60:
+            response['last_run_time_readable'] = f'{minutes_ago} minute{"s" if minutes_ago != 1 else ""} ago'
+        elif hours_ago < 24:
+            response['last_run_time_readable'] = f'{hours_ago} hour{"s" if hours_ago != 1 else ""} ago'
+        else:
+            days_ago = int(hours_ago / 24)
+            response['last_run_time_readable'] = f'{days_ago} day{"s" if days_ago != 1 else ""} ago'
+
+        # Calculate next run time (assuming hourly schedule)
+        interval_minutes = int(os.getenv('FEEDER_INTERVAL_MINUTES', '60'))
+        minutes_since_last_run = int(time_diff.total_seconds() / 60)
+        next_run_minutes = interval_minutes - minutes_since_last_run
+        if next_run_minutes > 0:
+            response['next_run_in_minutes'] = next_run_minutes
+
+    return jsonify(response)
 
 @app.route('/api/feeder/start', methods=['POST'])
 def start_feeder_api():
@@ -257,6 +316,12 @@ def start_feeder_api():
 def stop_feeder_api():
     """API endpoint to stop the feeder container."""
     success, message = stop_feeder()
+    return jsonify({'success': success, 'message': message})
+
+@app.route('/api/feeder/restart', methods=['POST'])
+def restart_feeder_api():
+    """API endpoint to restart the feeder container and trigger immediate feed processing."""
+    success, message = restart_feeder()
     return jsonify({'success': success, 'message': message})
 
 if __name__ == '__main__':
