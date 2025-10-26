@@ -136,8 +136,14 @@ def _analyze_episode_with_tracing(url, force):
             "status": "completed"
         }
 
-        # Langfuse wrapper handles flushing automatically
-        print(f"📊 [LANGFUSE] - Observations sent to cloud")
+        # Flush Langfuse traces to ensure they're sent to cloud
+        try:
+            from langfuse import get_client
+            langfuse_client = get_client()
+            langfuse_client.flush()
+            print(f"📊 [LANGFUSE] - Observations flushed to cloud")
+        except Exception as e:
+            print(f"⚠️  [LANGFUSE] - Flush warning: {e}")
 
         return result
 
@@ -194,6 +200,15 @@ def resummarize_episode(self, episode_id):
 
         total_time = time.time() - start_time
         print(f"\n🎉 [RESUMMARIZE SUCCESS] - Re-summarization complete! Total time: {total_time:.1f}s")
+
+        # Flush Langfuse traces to ensure they're sent to cloud
+        try:
+            from langfuse import get_client
+            langfuse_client = get_client()
+            langfuse_client.flush()
+            print(f"📊 [LANGFUSE] - Observations flushed to cloud")
+        except Exception as flush_error:
+            print(f"⚠️  [LANGFUSE] - Flush warning: {flush_error}")
 
     except Exception as e:
         print(f"❌ [RESUMMARIZE FAILED] - Error re-summarizing episode {episode_id}: {e}")
