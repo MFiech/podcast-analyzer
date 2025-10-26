@@ -72,44 +72,44 @@ export default function EpisodeDetailPage() {
   return (
     <div className="pb-40 md:pb-0">
       <div className="sticky top-0 md:top-16 bg-white border-b z-30">
-        <div className="px-4 py-3 max-w-2xl mx-auto flex items-center justify-between">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10 -ml-2">
+        <div className="px-4 py-4 max-w-2xl mx-auto flex items-start gap-3 justify-between">
+          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10 -ml-2 flex-shrink-0">
             <ChevronLeft className="w-6 h-6" />
           </Button>
-          <h1 className="flex-1 text-lg font-semibold line-clamp-1 px-2">{episode.title}</h1>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 line-clamp-2 leading-tight">{episode.title}</h1>
+            <p className="text-sm text-gray-600 mt-1">📡 {episode.feed_title || episode.feed_source || 'Unknown'}</p>
+          </div>
           <EpisodeMenu episodeId={episodeId} />
         </div>
-      </div>
-
-      <div className="px-4 py-4 max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-4 text-sm text-gray-600">
-          <span>📡 {episode.feed_title || episode.feed_source || 'Unknown'}</span>
-          <span>•</span>
+        <div className="px-4 pb-3 max-w-2xl mx-auto flex items-center gap-2 text-xs text-gray-500 border-t">
           <span>⏱️ {formatDuration(episode.duration)}</span>
           <span>•</span>
           <span>{formatDate(episode.created_at || episode.submitted_date)}</span>
+          <div className="ml-auto">
+            <Badge variant="secondary" className={statusInfo.color}>{statusInfo.label}</Badge>
+          </div>
         </div>
+      </div>
 
-        <div className="flex items-center gap-3 mb-6">
-          <h2 className="text-lg font-semibold">AI Summary</h2>
-          <Badge variant="secondary" className={statusInfo.color}>{statusInfo.label}</Badge>
-        </div>
+      <div className="px-4 py-6 max-w-2xl mx-auto">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">AI Summary</h2>
 
         {episode.status === 'completed' && episode.summary ? (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <div className="prose prose-sm dark:prose-invert max-w-none text-gray-700 text-sm leading-relaxed">
+          <div className="mb-8 p-6 bg-gray-50 rounded-lg">
+            <div className="prose prose-md dark:prose-invert max-w-none text-gray-700 leading-relaxed [&_p]:mb-4 [&_p]:last:mb-0 [&_ul]:mb-4 [&_li]:mb-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm">
               <ReactMarkdown>
                 {episode.summary}
               </ReactMarkdown>
             </div>
           </div>
         ) : episode.status === 'processing' ? (
-          <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-            <p className="text-orange-700 text-sm">⏳ Processing... This usually takes a few minutes.</p>
+          <div className="mb-8 p-6 bg-orange-50 border border-orange-200 rounded-lg">
+            <p className="text-orange-700 text-base">⏳ Processing... This usually takes a few minutes.</p>
           </div>
         ) : episode.status === 'failed' ? (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-700 text-sm">❌ Summarization failed. Please try again.</p>
+          <div className="mb-8 p-6 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-base">❌ Summarization failed. Please try again.</p>
           </div>
         ) : null}
 
@@ -117,10 +117,10 @@ export default function EpisodeDetailPage() {
           <Accordion type="single" collapsible className="mb-24 md:mb-6">
             <AccordionItem value="item-1">
               <AccordionTrigger className="hover:no-underline">
-                <h2 className="text-lg font-semibold">Full Transcript</h2>
+                <h2 className="text-xl font-bold text-gray-900">Full Transcript</h2>
               </AccordionTrigger>
               <AccordionContent>
-                <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+                <div className="p-6 bg-gray-50 rounded-lg mt-4 text-gray-700 whitespace-pre-wrap text-base leading-relaxed">
                   {episode.transcript}
                 </div>
               </AccordionContent>
