@@ -45,10 +45,8 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_HOST=http://host.docker.internal:4000
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
       - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-true}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - redis
     restart: unless-stopped
