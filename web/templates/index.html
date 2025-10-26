@@ -132,22 +132,16 @@
             button.textContent = 'Checking...';
 
             try {
-                // Always stop the container to trigger a restart (docker-compose will restart it automatically)
-                const response = await fetch('/api/feeder/stop', { method: 'POST' });
+                // Restart the container to trigger immediate feed processing
+                const response = await fetch('/api/feeder/restart', { method: 'POST' });
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage('Feeder restarted - checking for new episodes...', 'success');
+                    showMessage(result.message, 'success');
+                    // Refresh status immediately
+                    setTimeout(checkFeederStatus, 1000);
                 } else {
-                    // If container is already stopped, start it
-                    const startResponse = await fetch('/api/feeder/start', { method: 'POST' });
-                    const startResult = await startResponse.json();
-
-                    if (startResult.success) {
-                        showMessage('Feeder started - checking for new episodes...', 'success');
-                    } else {
-                        showMessage(startResult.message, 'error');
-                    }
+                    showMessage(result.message, 'error');
                 }
             } catch (error) {
                 showMessage('Error: ' + error.message, 'error');

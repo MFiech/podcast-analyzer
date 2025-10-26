@@ -73,6 +73,17 @@ def stop_feeder():
     except Exception as e:
         return False, f"Error stopping feeder: {e}"
 
+def restart_feeder():
+    """Restart the feeder container to trigger immediate feed processing."""
+    try:
+        container = docker_client.containers.get('podcast_feeder')
+        container.restart()
+        return True, "Feeder restarted - checking for new episodes"
+    except docker.errors.NotFound:
+        return False, "Feeder container not found"
+    except Exception as e:
+        return False, f"Error restarting feeder: {e}"
+
 @app.template_filter('markdown')
 def markdown_filter(text):
     """Convert markdown text to HTML"""
@@ -305,6 +316,12 @@ def start_feeder_api():
 def stop_feeder_api():
     """API endpoint to stop the feeder container."""
     success, message = stop_feeder()
+    return jsonify({'success': success, 'message': message})
+
+@app.route('/api/feeder/restart', methods=['POST'])
+def restart_feeder_api():
+    """API endpoint to restart the feeder container and trigger immediate feed processing."""
+    success, message = restart_feeder()
     return jsonify({'success': success, 'message': message})
 
 if __name__ == '__main__':
