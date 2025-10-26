@@ -72,20 +72,20 @@ export default function EpisodeDetailPage() {
   return (
     <div className="pb-40 md:pb-32">
       <div className="sticky top-0 md:top-16 bg-white border-b z-30">
-        <div className="px-4 py-4 max-w-2xl mx-auto">
+        <div className="px-4 py-4 max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-3 gap-2">
             <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10 -ml-2 flex-shrink-0">
               <ChevronLeft className="w-6 h-6" />
             </Button>
             <EpisodeMenu episodeId={episodeId} />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 leading-tight">{episode.title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 leading-tight">{episode.title}</h1>
           <p className="text-sm text-gray-600 mt-2">📡 {episode.feed_title || episode.feed_source || 'Unknown'}</p>
         </div>
       </div>
 
-      <div className="px-4 py-6 max-w-2xl mx-auto">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">AI Summary</h2>
+      <div className="px-4 py-6 max-w-4xl mx-auto">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">AI Summary</h2>
 
         {episode.status === 'completed' && episode.summary ? (
           <div className="mb-8 p-6 bg-gray-50 rounded-lg">
@@ -109,7 +109,7 @@ export default function EpisodeDetailPage() {
           <Accordion type="single" collapsible className="mb-24 md:mb-6">
             <AccordionItem value="item-1">
               <AccordionTrigger className="hover:no-underline">
-                <h2 className="text-xl font-bold text-gray-900">Full Transcript</h2>
+                <h2 className="text-lg font-bold text-gray-900">Full Transcript</h2>
               </AccordionTrigger>
               <AccordionContent>
                 <div className="p-6 bg-gray-50 rounded-lg mt-4 text-gray-700 whitespace-pre-wrap text-base leading-relaxed">

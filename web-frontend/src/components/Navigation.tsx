@@ -89,9 +89,9 @@ export function Navigation() {
           ))}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="pb-2 border-b-2 border-transparent text-gray-700 hover:text-gray-900 font-bold text-base">
+              <button className="pb-2 border-b-2 border-transparent text-gray-700 hover:text-gray-900 font-bold text-base hover:border-transparent">
                 More ⌄
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               {moreItems.map((item) => {

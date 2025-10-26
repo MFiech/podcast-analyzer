@@ -75,11 +75,11 @@ export function AudioPlayer({ audioUrl, title }: AudioPlayerProps) {
   };
 
   return (
-    <div className="fixed bottom-20 md:fixed md:bottom-0 left-0 right-0 bg-white border-t p-4 z-40">
+    <div className="fixed bottom-20 md:fixed md:bottom-0 left-0 right-0 bg-gradient-to-b from-gray-100 to-gray-50 border-t border-gray-200 p-4 z-40">
       <audio ref={audioRef} src={audioUrl} />
       
-      <div className="max-w-2xl mx-auto">
-        {title && <p className="text-xs text-gray-600 mb-2 truncate">{title}</p>}
+      <div className="max-w-4xl mx-auto">
+        {title && <p className="text-sm font-semibold text-gray-700 mb-3 truncate">{title}</p>}
         
         <Slider
           value={[currentTime]}
@@ -96,12 +96,12 @@ export function AudioPlayer({ audioUrl, title }: AudioPlayerProps) {
               onClick={togglePlayPause}
               variant="ghost"
               size="icon"
-              className="h-10 w-10"
+              className="h-12 w-12"
             >
               {isPlaying ? (
-                <PauseCircle className="w-6 h-6 text-blue-600" />
+                <PauseCircle className="w-8 h-8 text-blue-600" />
               ) : (
-                <PlayCircle className="w-6 h-6 text-blue-600" />
+                <PlayCircle className="w-8 h-8 text-blue-600" />
               )}
             </Button>
             <span className="text-xs font-medium w-12 text-right">

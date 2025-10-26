@@ -32,7 +32,7 @@ export default function FeedsPage() {
 
   return (
     <div className="pb-20 md:pb-0">
-      <div className="px-4 py-4 max-w-2xl mx-auto">
+      <div className="px-4 py-4 max-w-4xl mx-auto">
         <div className="hidden md:block mb-6">
           <h1 className="text-3xl font-bold text-gray-900">RSS Feeds</h1>
           <p className="text-gray-600 mt-1">Manage your podcast RSS feeds</p>
