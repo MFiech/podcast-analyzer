@@ -75,7 +75,7 @@ export function AudioPlayer({ audioUrl, title }: AudioPlayerProps) {
   };
 
   return (
-    <div className="fixed bottom-20 md:bottom-0 left-0 right-0 bg-white border-t p-4 md:relative md:border-t-0 md:mt-auto">
+    <div className="fixed bottom-20 md:fixed md:bottom-0 left-0 right-0 bg-white border-t p-4 z-40">
       <audio ref={audioRef} src={audioUrl} />
       
       <div className="max-w-2xl mx-auto">

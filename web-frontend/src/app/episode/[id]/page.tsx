@@ -70,25 +70,17 @@ export default function EpisodeDetailPage() {
   };
 
   return (
-    <div className="pb-40 md:pb-0">
+    <div className="pb-40 md:pb-32">
       <div className="sticky top-0 md:top-16 bg-white border-b z-30">
-        <div className="px-4 py-4 max-w-2xl mx-auto flex items-start gap-3 justify-between">
-          <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10 -ml-2 flex-shrink-0">
-            <ChevronLeft className="w-6 h-6" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-gray-900 line-clamp-2 leading-tight">{episode.title}</h1>
-            <p className="text-sm text-gray-600 mt-1">📡 {episode.feed_title || episode.feed_source || 'Unknown'}</p>
+        <div className="px-4 py-4 max-w-2xl mx-auto">
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10 -ml-2 flex-shrink-0">
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+            <EpisodeMenu episodeId={episodeId} />
           </div>
-          <EpisodeMenu episodeId={episodeId} />
-        </div>
-        <div className="px-4 pb-3 max-w-2xl mx-auto flex items-center gap-2 text-xs text-gray-500 border-t">
-          <span>⏱️ {formatDuration(episode.duration)}</span>
-          <span>•</span>
-          <span>{formatDate(episode.created_at || episode.submitted_date)}</span>
-          <div className="ml-auto">
-            <Badge variant="secondary" className={statusInfo.color}>{statusInfo.label}</Badge>
-          </div>
+          <h1 className="text-xl font-bold text-gray-900 leading-tight">{episode.title}</h1>
+          <p className="text-sm text-gray-600 mt-2">📡 {episode.feed_title || episode.feed_source || 'Unknown'}</p>
         </div>
       </div>
 
@@ -130,12 +122,10 @@ export default function EpisodeDetailPage() {
       </div>
 
       {(episode.audio_path || episode.file_path) && (
-        <div className="fixed bottom-0 left-0 right-0 md:static bg-white border-t z-40">
-          <AudioPlayer
-            audioUrl={`${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${episode.audio_path || episode.file_path}`}
-            title={episode.title}
-          />
-        </div>
+        <AudioPlayer
+          audioUrl={`${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${episode.audio_path || episode.file_path}`}
+          title={episode.title}
+        />
       )}
     </div>
   );

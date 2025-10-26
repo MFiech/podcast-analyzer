@@ -35,16 +35,16 @@ export function Navigation() {
             <Link
               key={item.href}
               href={item.href}
-              className="flex-1 flex flex-col items-center justify-center gap-1 text-xs border-r last:border-r-0"
+              className="flex-1 flex flex-col items-center justify-center gap-1 text-sm border-r last:border-r-0"
             >
-              <span className={pathname === item.href ? 'text-blue-600 font-semibold' : 'text-gray-600'}>
+              <span className={pathname === item.href ? 'text-blue-600 font-bold' : 'text-gray-600 font-semibold'}>
                 {item.label}
               </span>
             </Link>
           ))}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex-1 h-16 rounded-none flex flex-col items-center justify-center gap-1 text-xs">
+              <Button variant="ghost" className="flex-1 h-16 rounded-none flex flex-col items-center justify-center gap-1 text-sm font-semibold">
                 <span className="text-gray-600">More</span>
               </Button>
             </DropdownMenuTrigger>
@@ -78,10 +78,10 @@ export function Navigation() {
             <Link
               key={item.href}
               href={item.href}
-              className={`pb-2 border-b-2 text-sm font-medium ${
+              className={`pb-2 border-b-2 font-bold text-base ${
                 pathname === item.href
                   ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  : 'border-transparent text-gray-700 hover:text-gray-900'
               }`}
             >
               {item.label}
@@ -89,8 +89,8 @@ export function Navigation() {
           ))}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9">
-                <MoreVertical className="w-5 h-5" />
+              <Button variant="ghost" className="pb-2 border-b-2 border-transparent text-gray-700 hover:text-gray-900 font-bold text-base">
+                More ⌄
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
