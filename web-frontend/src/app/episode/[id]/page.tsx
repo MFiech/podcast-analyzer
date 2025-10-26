@@ -49,6 +49,24 @@ export default function EpisodeDetailPage() {
   }
 
   const statusInfo = statusConfig[episode.status as keyof typeof statusConfig];
+  
+  // Helper functions to format data
+  const formatDuration = (seconds: number | string) => {
+    if (typeof seconds === 'string') return seconds;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+  
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'Unknown';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <div className="pb-40">
@@ -64,11 +82,11 @@ export default function EpisodeDetailPage() {
 
       <div className="px-4 py-4 max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-4 text-sm text-gray-600">
-          <span>📡 {episode.feed_source}</span>
+          <span>📡 {episode.feed_title || episode.feed_source || 'Unknown'}</span>
           <span>•</span>
-          <span>⏱️ {episode.duration}</span>
+          <span>⏱️ {formatDuration(episode.duration)}</span>
           <span>•</span>
-          <span>{episode.submitted_date}</span>
+          <span>{formatDate(episode.created_at || episode.submitted_date)}</span>
         </div>
 
         <div className="flex items-center gap-3 mb-6">
@@ -106,9 +124,9 @@ export default function EpisodeDetailPage() {
         )}
       </div>
 
-      {episode.audio_path && (
+      {(episode.audio_path || episode.file_path) && (
         <AudioPlayer
-          audioUrl={`${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${episode.audio_path}`}
+          audioUrl={`${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${episode.audio_path || episode.file_path}`}
           title={episode.title}
         />
       )}

@@ -3,6 +3,10 @@ import sys
 import markdown
 import docker
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, jsonify
+from flask_cors import CORS
+from bson.objectid import ObjectId
+from bson.json_util import dumps, loads
+import json
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -12,6 +16,16 @@ from tasks import analyze_episode
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+
+# Enable CORS for frontend
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [r"http://localhost:*", r"http://127.0.0.1:*"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type"],
+        "supports_credentials": True
+    }
+})
 
 # Configure markdown
 md = markdown.Markdown(extensions=['extra', 'codehilite'])
@@ -251,6 +265,85 @@ def remove_feed(feed_id):
         flash(f'Error removing feed: {e}', 'error')
     return redirect(url_for('manage_feeds'))
 
+# Episode Management JSON API Endpoints
+@app.route('/api/episodes/<episode_id>/hide', methods=['POST'])
+def api_hide_episode(episode_id):
+    """API endpoint to hide an episode."""
+    db = PodcastDB()
+    try:
+        result = db.hide_episode(episode_id)
+        if result.modified_count > 0:
+            return app.response_class(
+                response=dumps({'success': True, 'message': 'Episode hidden'}),
+                status=200,
+                mimetype='application/json'
+            )
+        else:
+            return app.response_class(
+                response=dumps({'error': 'Episode not found'}),
+                status=404,
+                mimetype='application/json'
+            )
+    except Exception as e:
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
+
+@app.route('/api/episodes/<episode_id>/restore', methods=['POST'])
+def api_restore_episode(episode_id):
+    """API endpoint to restore a hidden episode."""
+    db = PodcastDB()
+    try:
+        result = db.restore_episode(episode_id)
+        if result.modified_count > 0:
+            return app.response_class(
+                response=dumps({'success': True, 'message': 'Episode restored'}),
+                status=200,
+                mimetype='application/json'
+            )
+        else:
+            return app.response_class(
+                response=dumps({'error': 'Episode not found'}),
+                status=404,
+                mimetype='application/json'
+            )
+    except Exception as e:
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
+
+@app.route('/api/episodes/<episode_id>/retry', methods=['POST'])
+def api_retry_episode(episode_id):
+    """API endpoint to retry a failed episode."""
+    db = PodcastDB()
+    try:
+        result = db.retry_failed_episode(episode_id)
+        if result.modified_count > 0:
+            episode = db.get_episode_by_id(episode_id)
+            if episode:
+                analyze_episode.delay(episode['url'])
+            return app.response_class(
+                response=dumps({'success': True, 'message': 'Episode queued for retry'}),
+                status=200,
+                mimetype='application/json'
+            )
+        else:
+            return app.response_class(
+                response=dumps({'error': 'Episode not found'}),
+                status=404,
+                mimetype='application/json'
+            )
+    except Exception as e:
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
+
 # Feeder Container Control Routes
 @app.route('/api/feeder/status')
 def feeder_status_api():
@@ -352,13 +445,16 @@ def api_episodes():
         ep['id'] = str(ep['_id'])
         ep.pop('_id', None)
         ep.pop('feed_info', None)  # Remove aggregation field
+        # Convert any remaining ObjectId fields
+        if 'feed_id' in ep and isinstance(ep['feed_id'], ObjectId):
+            ep['feed_id'] = str(ep['feed_id'])
     
-    return jsonify({
-        'episodes': paginated,
-        'total': total,
-        'completed_count': completed_count,
-        'processing_count': processing_count
-    })
+    # Use bson.json_util to serialize the response
+    return app.response_class(
+        response=dumps({'episodes': paginated, 'total': total, 'completed_count': completed_count, 'processing_count': processing_count}),
+        status=200,
+        mimetype='application/json'
+    )
 
 @app.route('/api/episodes/<episode_id>', methods=['GET'])
 def api_episode_detail(episode_id):
@@ -371,9 +467,23 @@ def api_episode_detail(episode_id):
         
         episode['id'] = str(episode['_id'])
         episode.pop('_id', None)
-        return jsonify(episode)
+        
+        # Convert any remaining ObjectId fields
+        if 'feed_id' in episode and isinstance(episode['feed_id'], ObjectId):
+            episode['feed_id'] = str(episode['feed_id'])
+        
+        # Use bson.json_util to serialize the response
+        return app.response_class(
+            response=dumps(episode),
+            status=200,
+            mimetype='application/json'
+        )
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=400,
+            mimetype='application/json'
+        )
 
 @app.route('/api/episodes', methods=['POST'])
 def api_add_episode():
@@ -382,18 +492,34 @@ def api_add_episode():
     url = data.get('url')
     
     if not url:
-        return jsonify({'error': 'URL is required'}), 400
+        return app.response_class(
+            response=dumps({'error': 'URL is required'}),
+            status=400,
+            mimetype='application/json'
+        )
     
     try:
         db = PodcastDB()
         if db.episode_exists(url):
-            return jsonify({'error': 'Episode already exists'}), 409
+            return app.response_class(
+                response=dumps({'error': 'Episode already exists'}),
+                status=409,
+                mimetype='application/json'
+            )
         
         db.create_placeholder(url, title="Manual Submission")
         analyze_episode.delay(url)
-        return jsonify({'success': True, 'message': 'Episode queued for analysis'}), 201
+        return app.response_class(
+            response=dumps({'success': True, 'message': 'Episode queued for analysis'}),
+            status=201,
+            mimetype='application/json'
+        )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
 
 @app.route('/api/episodes/<episode_id>/summarize-again', methods=['POST'])
 def api_summarize_again(episode_id):
@@ -402,16 +528,32 @@ def api_summarize_again(episode_id):
     try:
         episode = db.get_episode_by_id(episode_id)
         if not episode:
-            return jsonify({'error': 'Episode not found'}), 404
+            return app.response_class(
+                response=dumps({'error': 'Episode not found'}),
+                status=404,
+                mimetype='application/json'
+            )
         
         if not episode.get('raw_transcript'):
-            return jsonify({'error': 'No raw transcript available'}), 400
+            return app.response_class(
+                response=dumps({'error': 'No raw transcript available'}),
+                status=400,
+                mimetype='application/json'
+            )
         
         from tasks import resummarize_episode
         resummarize_episode.delay(episode_id)
-        return jsonify({'success': True, 'message': 'Episode queued for re-summarization'})
+        return app.response_class(
+            response=dumps({'success': True, 'message': 'Episode queued for re-summarization'}),
+            status=200,
+            mimetype='application/json'
+        )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
 
 # RSS Feeds API Endpoints
 @app.route('/api/feeds', methods=['GET'])
@@ -429,7 +571,11 @@ def api_feeds():
         episodes_count = db.episodes.count_documents({'feed_id': ObjectId(feed['id'])})
         feed['episode_count'] = episodes_count
     
-    return jsonify(feeds)
+    return app.response_class(
+        response=dumps(feeds),
+        status=200,
+        mimetype='application/json'
+    )
 
 @app.route('/api/feeds', methods=['POST'])
 def api_add_feed():
@@ -439,20 +585,36 @@ def api_add_feed():
     feed_title = data.get('feed_title', '')
     
     if not feed_url:
-        return jsonify({'error': 'Feed URL is required'}), 400
+        return app.response_class(
+            response=dumps({'error': 'Feed URL is required'}),
+            status=400,
+            mimetype='application/json'
+        )
     
     try:
         db = PodcastDB()
         if db.feed_exists(feed_url):
-            return jsonify({'error': 'Feed already exists'}), 409
+            return app.response_class(
+                response=dumps({'error': 'Feed already exists'}),
+                status=409,
+                mimetype='application/json'
+            )
         
         feed = db.add_feed(feed_url, feed_title)
         feed['id'] = str(feed['_id'])
         feed.pop('_id', None)
         feed['episode_count'] = 0
-        return jsonify(feed), 201
+        return app.response_class(
+            response=dumps(feed),
+            status=201,
+            mimetype='application/json'
+        )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
 
 @app.route('/api/feeds/<feed_id>', methods=['PUT'])
 def api_update_feed(feed_id):
@@ -468,15 +630,27 @@ def api_update_feed(feed_id):
         result = db.update_feed(feed_id, update_data)
         
         if result.modified_count == 0:
-            return jsonify({'error': 'Feed not found'}), 404
+            return app.response_class(
+                response=dumps({'error': 'Feed not found'}),
+                status=404,
+                mimetype='application/json'
+            )
         
         feed = db.get_feed_by_id(feed_id)
         feed['id'] = str(feed['_id'])
         feed.pop('_id', None)
         feed['episode_count'] = db.episodes.count_documents({'feed_id': ObjectId(feed_id)})
-        return jsonify(feed)
+        return app.response_class(
+            response=dumps(feed),
+            status=200,
+            mimetype='application/json'
+        )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
 
 @app.route('/api/feeds/<feed_id>', methods=['DELETE'])
 def api_delete_feed(feed_id):
@@ -485,10 +659,22 @@ def api_delete_feed(feed_id):
     try:
         result = db.remove_feed(feed_id)
         if result.deleted_count == 0:
-            return jsonify({'error': 'Feed not found'}), 404
-        return jsonify({'success': True, 'message': 'Feed deleted'})
+            return app.response_class(
+                response=dumps({'error': 'Feed not found'}),
+                status=404,
+                mimetype='application/json'
+            )
+        return app.response_class(
+            response=dumps({'success': True, 'message': 'Feed deleted'}),
+            status=200,
+            mimetype='application/json'
+        )
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

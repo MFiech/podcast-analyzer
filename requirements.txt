@@ -10,6 +10,7 @@ feedparser
 celery
 redis
 Flask
+flask-cors
 pymongo[srv]
 markdown
 docker

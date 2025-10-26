@@ -48,6 +48,24 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
     },
     onError: () => toast.error('Failed to retry episode'),
   });
+  
+  // Helper functions to format data
+  const formatDuration = (seconds: number | string) => {
+    if (typeof seconds === 'string') return seconds;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+  
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'Unknown';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <Card className="p-4 mb-3 hover:shadow-md transition-shadow">
@@ -56,9 +74,9 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-gray-900 line-clamp-2">{episode.title}</h3>
             <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
-              <span>📡 {episode.feed_source}</span>
-              <span>• {episode.duration}</span>
-              <span>• {episode.submitted_date}</span>
+              <span>📡 {episode.feed_title || episode.feed_source || 'Unknown'}</span>
+              <span>• {formatDuration(episode.duration)}</span>
+              <span>• {formatDate(episode.created_at || episode.submitted_date)}</span>
             </p>
             {episode.status === 'processing' && (
               <p className="text-xs text-orange-600 mt-2 flex items-center gap-1">
