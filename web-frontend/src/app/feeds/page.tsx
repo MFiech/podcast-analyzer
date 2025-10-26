@@ -58,11 +58,7 @@ export default function FeedsPage() {
         ) : feeds && feeds.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 mb-4">No RSS feeds yet</p>
-            <p className="text-sm text-gray-400 mb-6">Add your first feed to get started</p>
-            <Button onClick={handleAddNew}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add RSS Feed
-            </Button>
+            <p className="text-sm text-gray-400">Tap the + button to add your first feed</p>
           </div>
         ) : (
           <>
@@ -82,10 +78,14 @@ export default function FeedsPage() {
         )}
       </div>
 
-      <div className="fixed bottom-20 md:bottom-0 md:static right-4 md:right-0 md:mt-6 px-4">
-        <Button onClick={handleAddNew} size="lg" className="rounded-full md:rounded-lg w-14 h-14 md:w-auto md:h-auto">
-          <Plus className="w-6 h-6 md:w-4 md:h-4" />
-          <span className="hidden md:inline md:ml-2">Add Feed</span>
+      {/* Floating Action Button */}
+      <div className="fixed bottom-20 right-4 md:bottom-4">
+        <Button
+          size="lg"
+          onClick={handleAddNew}
+          className="rounded-full w-14 h-14 shadow-lg bg-blue-600 hover:bg-blue-700"
+        >
+          <Plus className="w-6 h-6" />
         </Button>
       </div>
 
