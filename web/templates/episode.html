@@ -19,7 +19,6 @@
             </div>
         </div>
         <p><strong>Status:</strong> <span class="status-badge status-{{ episode.status }}">{{ episode.status }}</span></p>
-        <p><strong>URL:</strong> <a href="{{ episode.url }}" target="_blank">{{ episode.url }}</a></p>
         <p><strong>Submitted:</strong> {{ episode.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</p>
 
         {% if episode.status == 'completed' %}

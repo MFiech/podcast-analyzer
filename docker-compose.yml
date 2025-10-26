@@ -8,15 +8,6 @@ services:
       - "6380:6379"
     restart: unless-stopped
 
-  mongo:
-    image: mongo:latest
-    container_name: mongo
-    ports:
-      - "27018:27017"
-    volumes:
-      - mongo_data:/data/db
-    restart: unless-stopped
-
   web:
     build: .
     container_name: podcast_web
@@ -38,7 +29,6 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
       - LANGFUSE_HOST=${LANGFUSE_HOST}
     depends_on:
-      - mongo
       - redis
 
   worker:
@@ -61,7 +51,6 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - redis
-      - mongo
     restart: unless-stopped
 
   feeder:
@@ -80,7 +69,3 @@ services:
     depends_on:
       - redis
       - worker
-      - mongo
-
-volumes:
-  mongo_data:
