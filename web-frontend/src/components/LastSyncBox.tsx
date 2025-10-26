@@ -37,9 +37,9 @@ export function LastSyncBox() {
           size="sm"
           onClick={() => checkForNew()}
           disabled={isPending}
-          className="text-blue-600 hover:text-blue-700 p-0 h-auto"
+          className="text-blue-600 hover:text-blue-700 p-0 h-auto whitespace-nowrap"
         >
-          {isPending ? 'Checking...' : 'Check for new episodes'}
+          {isPending ? 'Checking...' : 'Check for new'}
         </Button>
       </AlertDescription>
     </Alert>

@@ -38,6 +38,13 @@ export default function FeedsPage() {
           <p className="text-gray-600 mt-1">Manage your podcast RSS feeds</p>
         </div>
 
+        <Alert className="mb-6 bg-blue-50 border-blue-200">
+          <Info className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-sm">
+            Need help finding RSS feeds? Use <a href="https://getrssfeed.com/" target="_blank" rel="noopener noreferrer" className="font-semibold text-blue-600 hover:underline">getrssfeed.com</a> to find podcast RSS URLs.
+          </AlertDescription>
+        </Alert>
+
         <div className="flex items-center justify-between mb-4 md:mb-6">
           <div>
             <h2 className="text-lg font-semibold">RSS Feeds</h2>

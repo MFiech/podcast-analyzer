@@ -68,15 +68,16 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
   };
 
   return (
-    <Card className="p-4 mb-3 hover:shadow-md transition-shadow">
-      <Link href={`/episode/${episode.id}`}>
-        <div className="flex gap-3 cursor-pointer">
-          <div className="flex-1 min-w-0">
+    <Card className="p-4 mb-3 hover:shadow-md transition-shadow relative">
+      <div className="flex gap-3">
+        <Link href={`/episode/${episode.id}`} className="flex-1 min-w-0 cursor-pointer">
+          <div>
             <h3 className="font-semibold text-gray-900 line-clamp-2">{episode.title}</h3>
-            <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
-              <span>📡 {episode.feed_title || episode.feed_source || 'Unknown'}</span>
-              <span>• {formatDuration(episode.duration)}</span>
-              <span>• {formatDate(episode.created_at || episode.submitted_date)}</span>
+            <p className="text-xs text-gray-600 mt-2">
+              📡 {episode.feed_title || episode.feed_source || 'Unknown'}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {formatDate(episode.created_at || episode.submitted_date)}
             </p>
             {episode.status === 'processing' && (
               <p className="text-xs text-orange-600 mt-2 flex items-center gap-1">
@@ -90,38 +91,38 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
               </p>
             )}
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <Badge variant="secondary" className={statusInfo.color}>
-              {statusInfo.label}
-            </Badge>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={(e) => e.preventDefault()}>
-                  <MoreVertical className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+        </Link>
+        <div className="flex flex-col items-end justify-between gap-2">
+          <Badge variant="secondary" className={statusInfo.color}>
+            {statusInfo.label}
+          </Badge>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={(e) => e.preventDefault()} className="h-8 w-8">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={(e) => {
+                e.preventDefault();
+                handleHide();
+              }}>
+                <Eye className="w-4 h-4 mr-2" />
+                Hide
+              </DropdownMenuItem>
+              {episode.status === 'failed' && (
                 <DropdownMenuItem onClick={(e) => {
                   e.preventDefault();
-                  handleHide();
+                  handleRetry();
                 }}>
-                  <Eye className="w-4 h-4 mr-2" />
-                  Hide
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Retry
                 </DropdownMenuItem>
-                {episode.status === 'failed' && (
-                  <DropdownMenuItem onClick={(e) => {
-                    e.preventDefault();
-                    handleRetry();
-                  }}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Retry
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-      </Link>
+      </div>
     </Card>
   );
 }

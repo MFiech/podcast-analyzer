@@ -23,7 +23,7 @@ export default function Home() {
 
   return (
     <div className="px-4 py-4 max-w-4xl mx-auto pb-24 md:pb-4">
-      <div className="md:hidden mb-6 flex items-center gap-2">
+      <div className="md:hidden mb-6 flex items-center justify-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
           P
         </div>

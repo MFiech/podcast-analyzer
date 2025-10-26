@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Settings, Info, Zap, ExternalLink, Github, BarChart3 } from 'lucide-react';
+import { MoreVertical, Settings, Info, Zap, ExternalLink, Github, BarChart3, Menu } from 'lucide-react';
 
 const navigationItems = [
   { href: '/', label: 'Episodes' },
@@ -44,8 +44,8 @@ export function Navigation() {
           ))}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex-1 h-16 rounded-none flex flex-col items-center justify-center gap-1 text-sm font-semibold">
-                <span className="text-gray-600">More</span>
+              <Button variant="ghost" className="flex-1 h-16 rounded-none flex items-center justify-center text-sm font-semibold">
+                <Menu className="w-5 h-5 text-gray-600" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -67,12 +67,12 @@ export function Navigation() {
 
       {/* Desktop Top Navigation */}
       <div className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-40">
-        <div className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
             P
           </div>
           <span className="font-bold text-lg">Podcast Summarizer</span>
-        </div>
+        </Link>
         <nav className="flex gap-8 items-center">
           {navigationItems.map((item) => (
             <Link
