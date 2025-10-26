@@ -4,6 +4,7 @@ Podcast downloader using yt-dlp
 import yt_dlp
 import os
 import time
+import subprocess
 from pathlib import Path
 from datetime import datetime
 
@@ -19,6 +20,21 @@ class PodcastDownloader:
             timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp}] DOWNLOADER: {message}")
     
+    def _get_duration_from_file(self, file_path):
+        """Extract duration from audio file using ffprobe"""
+        try:
+            result = subprocess.run(
+                ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1:nokey=1', file_path],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                return int(float(result.stdout.strip()))
+        except Exception as e:
+            self._debug_log(f"ffprobe error: {e}")
+        return 0
+    
     def download(self, url):
         """Download podcast audio from URL"""
         self._debug_log(f"Starting download from: {url}")
@@ -29,6 +45,14 @@ class PodcastDownloader:
             'extractaudio': True,
             'audioformat': 'mp3',
             'audioquality': '192K',
+            # Add options to bypass bot detection
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                    'player_skip': ['webpage', 'configs'],
+                }
+            },
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -71,10 +95,12 @@ class PodcastDownloader:
                     self._debug_log(f"Found downloaded file: {file_path}")
                     self._debug_log(f"File size: {file_size:.2f} MB")
                     
+                    final_duration = duration if duration > 0 else self._get_duration_from_file(str(file_path))
+                    self._debug_log(f"Final duration: {final_duration//60}:{final_duration%60:02d}")
                     return {
                         'title': title,
-                        'duration': duration,
-                        'file_path': str(file_path),
+                        'duration': final_duration,
+                        'file_path': f'audio/{file_path.name}',
                         'url': url
                     }
                 

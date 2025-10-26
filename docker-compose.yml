@@ -8,15 +8,6 @@ services:
       - "6380:6379"
     restart: unless-stopped
 
-  mongo:
-    image: mongo:latest
-    container_name: mongo
-    ports:
-      - "27018:27017"
-    volumes:
-      - mongo_data:/data/db
-    restart: unless-stopped
-
   web:
     build: .
     container_name: podcast_web
@@ -31,14 +22,13 @@ services:
       - ./database.py:/app/database.py
       - ./feed_processor.py:/app/feed_processor.py
     environment:
-      - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
+      - MONGO_CONNECTION_STRING=${MONGO_CONNECTION_STRING}
       - FLASK_ENV=development
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
       - LANGFUSE_HOST=${LANGFUSE_HOST}
     depends_on:
-      - mongo
       - redis
 
   worker:
@@ -51,7 +41,7 @@ services:
       - ./database.py:/app/database.py
       - ./feed_processor.py:/app/feed_processor.py
     environment:
-      - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
+      - MONGO_CONNECTION_STRING=${MONGO_CONNECTION_STRING}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
@@ -61,7 +51,6 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       - redis
-      - mongo
     restart: unless-stopped
 
   feeder:
@@ -72,7 +61,7 @@ services:
       - ./data:/app/data
       - ./.env:/app/.env
     environment:
-      - MONGO_CONNECTION_STRING=mongodb://mongo:27017/
+      - MONGO_CONNECTION_STRING=${MONGO_CONNECTION_STRING}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
@@ -80,7 +69,3 @@ services:
     depends_on:
       - redis
       - worker
-      - mongo
-
-volumes:
-  mongo_data:

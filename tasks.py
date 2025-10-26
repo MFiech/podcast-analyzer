@@ -74,7 +74,7 @@ def _analyze_episode_with_tracing(url, force):
             raw_transcript = transcript_path.read_text(encoding='utf-8')
             transcribe_method = "loaded_from_cache"
         else:
-            raw_transcript = transcriber.transcribe(episode_data['file_path'], episode_data['title'])
+            raw_transcript = transcriber.transcribe(f"data/{episode_data['file_path']}", episode_data['title'])
             if not raw_transcript:
                 raise RuntimeError("Failed to transcribe audio")
             transcribe_method = "whisper_transcription"
@@ -113,6 +113,7 @@ def _analyze_episode_with_tracing(url, force):
         summary = summarizer.summarize(clean_transcript, episode_data['title'])
         episode_data['summary'] = summary
 
+        episode_data['duration'] = episode_data.get('duration', 0)
         # Step 5: Save to database
         episode_data['status'] = 'completed'
         db.save_episode(episode_data)

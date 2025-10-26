@@ -8,20 +8,7 @@ def init_default_feeds():
     """Add default RSS feeds to the database if they don't exist."""
     db = PodcastDB()
     
-    default_feeds = [
-        {
-            "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCnpBg7yqNauHtlNSpOl5-cg",
-            "title": "Peter Yang"
-        },
-        {
-            "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UCRYY7IEbkHLH_ScJCu9eWDQ",
-            "title": "How I AI"
-        },
-        {
-            "url": "https://www.youtube.com/feeds/videos.xml?channel_id=UC6t1O76G0jYXOAoYCm153dA",
-            "title": "Lenn's Rachitsky"
-        }
-    ]
+    default_feeds = []
     
     print("🎙️  Initializing default RSS feeds...")
     

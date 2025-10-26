@@ -19,16 +19,15 @@
             </div>
         </div>
         <p><strong>Status:</strong> <span class="status-badge status-{{ episode.status }}">{{ episode.status }}</span></p>
-        <p><strong>URL:</strong> <a href="{{ episode.url }}" target="_blank">{{ episode.url }}</a></p>
         <p><strong>Submitted:</strong> {{ episode.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</p>
 
         {% if episode.status == 'completed' %}
             
             {% if episode.get('file_path') %}
             <div class="audio-player">
-                <h3>Audio</h3>
+                <h3>Audio{% if episode.get("duration") %} <span style="font-size: 0.8em; color: #666;">({{ (episode.duration // 60) }}:{{ "%02d" % (episode.duration % 60) }})</span>{% endif %}</h3>
                 <audio controls>
-                    <source src="/{{ episode.file_path }}" type="audio/webm">
+                    <source src="/data/{{ episode.file_path }}" type="audio/mpeg">
                     Your browser does not support the audio element.
                 </audio>
             </div>
