@@ -21,9 +21,9 @@
                 {% else %}
                     <a href="{{ url_for('index', include_hidden='true') }}" class="button secondary">Show Deleted Episodes</a>
                 {% endif %}
-                <button id="feeder-toggle" class="button {% if feeder_status == 'running' %}danger{% elif feeder_status == 'recently_ran' %}warning{% else %}success{% endif %}"
+                <button id="feeder-toggle" class="button success"
                         onclick="toggleFeeder()">
-                    {% if feeder_status == 'running' %}Turn off Feeder{% elif feeder_status == 'recently_ran' %}Feeder Just Ran{% else %}Turn on Feeder{% endif %}
+                    Check for New Episodes
                 </button>
             </div>
         </div>
@@ -122,57 +122,38 @@
 
     <script>
         let feederStatus = '{{ feeder_status }}';
-        
-        function updateFeederButton() {
-            const button = document.getElementById('feeder-toggle');
-            if (feederStatus === 'running') {
-                button.textContent = 'Turn off Feeder';
-                button.className = 'button danger';
-            } else if (feederStatus === 'recently_ran') {
-                button.textContent = 'Feeder Just Ran';
-                button.className = 'button warning';
-            } else {
-                button.textContent = 'Turn on Feeder';
-                button.className = 'button success';
-            }
-        }
-        
+
         async function toggleFeeder() {
             const button = document.getElementById('feeder-toggle');
             const originalText = button.textContent;
-            
+
             // Disable button and show loading state
             button.disabled = true;
-            button.textContent = 'Processing...';
-            
+            button.textContent = 'Checking...';
+
             try {
-                let response;
-                if (feederStatus === 'running') {
-                    response = await fetch('/api/feeder/stop', { method: 'POST' });
-                } else {
-                    response = await fetch('/api/feeder/start', { method: 'POST' });
-                }
-                
+                // Always stop the container to trigger a restart (docker-compose will restart it automatically)
+                const response = await fetch('/api/feeder/stop', { method: 'POST' });
                 const result = await response.json();
-                
+
                 if (result.success) {
-                    // Toggle the status
-                    if (feederStatus === 'running') {
-                        feederStatus = 'stopped';
-                    } else {
-                        feederStatus = 'running';
-                    }
-                    updateFeederButton();
-                    
-                    // Show success message
-                    showMessage(result.message, 'success');
+                    showMessage('Feeder restarted - checking for new episodes...', 'success');
                 } else {
-                    showMessage(result.message, 'error');
+                    // If container is already stopped, start it
+                    const startResponse = await fetch('/api/feeder/start', { method: 'POST' });
+                    const startResult = await startResponse.json();
+
+                    if (startResult.success) {
+                        showMessage('Feeder started - checking for new episodes...', 'success');
+                    } else {
+                        showMessage(startResult.message, 'error');
+                    }
                 }
             } catch (error) {
                 showMessage('Error: ' + error.message, 'error');
             } finally {
                 button.disabled = false;
+                button.textContent = originalText;
             }
         }
         
@@ -229,10 +210,7 @@
             try {
                 const response = await fetch('/api/feeder/status');
                 const result = await response.json();
-                if (result.status !== feederStatus) {
-                    feederStatus = result.status;
-                    updateFeederButton();
-                }
+                feederStatus = result.status;
                 updateFeederStatusInfo(result);
             } catch (error) {
                 console.error('Error checking feeder status:', error);
