@@ -324,5 +324,171 @@ def restart_feeder_api():
     success, message = restart_feeder()
     return jsonify({'success': success, 'message': message})
 
+# JSON API Endpoints for Frontend
+@app.route('/api/episodes', methods=['GET'])
+def api_episodes():
+    """API endpoint to get episodes list."""
+    db = PodcastDB()
+    status_filter = request.args.get('status')
+    limit = int(request.args.get('limit', 10))
+    offset = int(request.args.get('offset', 0))
+    
+    episodes = db.list_episodes(include_hidden=False)
+    
+    # Filter by status if provided
+    if status_filter:
+        episodes = [ep for ep in episodes if ep.get('status') == status_filter]
+    
+    # Calculate totals
+    total = len(episodes)
+    completed_count = len([ep for ep in episodes if ep.get('status') == 'completed'])
+    processing_count = len([ep for ep in episodes if ep.get('status') in ['pending', 'processing']])
+    
+    # Apply pagination
+    paginated = episodes[offset:offset + limit]
+    
+    # Convert ObjectId to string for JSON serialization
+    for ep in paginated:
+        ep['id'] = str(ep['_id'])
+        ep.pop('_id', None)
+        ep.pop('feed_info', None)  # Remove aggregation field
+    
+    return jsonify({
+        'episodes': paginated,
+        'total': total,
+        'completed_count': completed_count,
+        'processing_count': processing_count
+    })
+
+@app.route('/api/episodes/<episode_id>', methods=['GET'])
+def api_episode_detail(episode_id):
+    """API endpoint to get a single episode."""
+    db = PodcastDB()
+    try:
+        episode = db.get_episode_by_id(episode_id)
+        if not episode:
+            return jsonify({'error': 'Episode not found'}), 404
+        
+        episode['id'] = str(episode['_id'])
+        episode.pop('_id', None)
+        return jsonify(episode)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@app.route('/api/episodes', methods=['POST'])
+def api_add_episode():
+    """API endpoint to add a new episode."""
+    data = request.get_json()
+    url = data.get('url')
+    
+    if not url:
+        return jsonify({'error': 'URL is required'}), 400
+    
+    try:
+        db = PodcastDB()
+        if db.episode_exists(url):
+            return jsonify({'error': 'Episode already exists'}), 409
+        
+        db.create_placeholder(url, title="Manual Submission")
+        analyze_episode.delay(url)
+        return jsonify({'success': True, 'message': 'Episode queued for analysis'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/episodes/<episode_id>/summarize-again', methods=['POST'])
+def api_summarize_again(episode_id):
+    """API endpoint to re-summarize an episode."""
+    db = PodcastDB()
+    try:
+        episode = db.get_episode_by_id(episode_id)
+        if not episode:
+            return jsonify({'error': 'Episode not found'}), 404
+        
+        if not episode.get('raw_transcript'):
+            return jsonify({'error': 'No raw transcript available'}), 400
+        
+        from tasks import resummarize_episode
+        resummarize_episode.delay(episode_id)
+        return jsonify({'success': True, 'message': 'Episode queued for re-summarization'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# RSS Feeds API Endpoints
+@app.route('/api/feeds', methods=['GET'])
+def api_feeds():
+    """API endpoint to get all feeds."""
+    db = PodcastDB()
+    feeds = db.list_feeds()
+    
+    # Convert ObjectId to string and add episode count
+    for feed in feeds:
+        feed['id'] = str(feed['_id'])
+        feed.pop('_id', None)
+        
+        # Count episodes for this feed
+        episodes_count = db.episodes.count_documents({'feed_id': ObjectId(feed['id'])})
+        feed['episode_count'] = episodes_count
+    
+    return jsonify(feeds)
+
+@app.route('/api/feeds', methods=['POST'])
+def api_add_feed():
+    """API endpoint to add a new RSS feed."""
+    data = request.get_json()
+    feed_url = data.get('feed_url')
+    feed_title = data.get('feed_title', '')
+    
+    if not feed_url:
+        return jsonify({'error': 'Feed URL is required'}), 400
+    
+    try:
+        db = PodcastDB()
+        if db.feed_exists(feed_url):
+            return jsonify({'error': 'Feed already exists'}), 409
+        
+        feed = db.add_feed(feed_url, feed_title)
+        feed['id'] = str(feed['_id'])
+        feed.pop('_id', None)
+        feed['episode_count'] = 0
+        return jsonify(feed), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/feeds/<feed_id>', methods=['PUT'])
+def api_update_feed(feed_id):
+    """API endpoint to update a feed."""
+    db = PodcastDB()
+    data = request.get_json()
+    
+    try:
+        update_data = {
+            'title': data.get('feed_title', ''),
+            'url': data.get('feed_url')
+        }
+        result = db.update_feed(feed_id, update_data)
+        
+        if result.modified_count == 0:
+            return jsonify({'error': 'Feed not found'}), 404
+        
+        feed = db.get_feed_by_id(feed_id)
+        feed['id'] = str(feed['_id'])
+        feed.pop('_id', None)
+        feed['episode_count'] = db.episodes.count_documents({'feed_id': ObjectId(feed_id)})
+        return jsonify(feed)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/feeds/<feed_id>', methods=['DELETE'])
+def api_delete_feed(feed_id):
+    """API endpoint to delete a feed."""
+    db = PodcastDB()
+    try:
+        result = db.remove_feed(feed_id)
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Feed not found'}), 404
+        return jsonify({'success': True, 'message': 'Feed deleted'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
