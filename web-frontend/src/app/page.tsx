@@ -23,14 +23,14 @@ export default function Home() {
 
   return (
     <div className="px-4 py-4 max-w-4xl mx-auto pb-24 md:pb-4">
-      <div className="md:hidden mb-6 flex items-center justify-center gap-2">
+      <div className="md:hidden mb-4 flex items-center justify-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
           P
         </div>
         <span className="font-bold text-lg">Podcast Summarizer</span>
       </div>
-      <div className="hidden md:block mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Episodes</h1>
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Episodes</h1>
+      <div className="hidden md:block mb-2">
         <p className="text-gray-600 mt-1">Manage and track your podcast episodes</p>
       </div>
 

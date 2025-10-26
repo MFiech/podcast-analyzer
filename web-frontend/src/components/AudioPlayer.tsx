@@ -75,7 +75,7 @@ export function AudioPlayer({ audioUrl, title }: AudioPlayerProps) {
   };
 
   return (
-    <div className="fixed bottom-20 md:fixed md:bottom-0 left-0 right-0 bg-gradient-to-b from-gray-100 to-gray-50 border-t border-gray-200 p-4 z-40">
+    <div className="fixed bottom-20 md:fixed md:bottom-0 left-0 right-0 bg-gradient-to-b from-blue-100 to-blue-50 border-t border-blue-200 p-4 z-40">
       <audio ref={audioRef} src={audioUrl} />
       
       <div className="max-w-4xl mx-auto">
@@ -96,12 +96,12 @@ export function AudioPlayer({ audioUrl, title }: AudioPlayerProps) {
               onClick={togglePlayPause}
               variant="ghost"
               size="icon"
-              className="h-12 w-12"
+              className="h-20 w-20"
             >
               {isPlaying ? (
-                <PauseCircle className="w-8 h-8 text-blue-600" />
+                <PauseCircle className="w-12 h-12 text-blue-600" />
               ) : (
-                <PlayCircle className="w-8 h-8 text-blue-600" />
+                <PlayCircle className="w-12 h-12 text-blue-600" />
               )}
             </Button>
             <span className="text-xs font-medium w-12 text-right">

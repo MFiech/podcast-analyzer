@@ -89,8 +89,11 @@ export function Navigation() {
           ))}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="pb-2 border-b-2 border-transparent text-gray-700 hover:text-gray-900 font-bold text-base hover:border-transparent">
-                More ⌄
+              <button className="pb-2 border-b-2 border-transparent text-gray-700 hover:text-gray-900 font-bold text-base hover:border-transparent flex items-center gap-1">
+                More
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">

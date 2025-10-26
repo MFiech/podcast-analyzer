@@ -28,7 +28,7 @@ export function LastSyncBox() {
   return (
     <Alert className="mb-6 bg-blue-50 border-blue-200">
       <Clock className="h-4 w-4 text-blue-600" />
-      <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+      <AlertDescription className="flex flex-row items-center justify-between gap-2">
         <span className="text-sm">
           Last sync: <span className="font-medium">{status?.last_run_time_readable || 'Never'}</span>
         </span>

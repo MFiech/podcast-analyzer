@@ -40,7 +40,7 @@ export default function FeedsPage() {
 
         <Alert className="mb-6 bg-blue-50 border-blue-200">
           <Info className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-sm">
+          <AlertDescription className="text-sm whitespace-nowrap overflow-x-auto">
             Need help finding RSS feeds? Use <a href="https://getrssfeed.com/" target="_blank" rel="noopener noreferrer" className="font-semibold text-blue-600 hover:underline">getrssfeed.com</a> to find podcast RSS URLs.
           </AlertDescription>
         </Alert>
@@ -74,13 +74,6 @@ export default function FeedsPage() {
                 <FeedCard key={feed.id} feed={feed} onEdit={handleEdit} />
               ))}
             </div>
-
-            <Alert className="bg-blue-50 border-blue-200">
-              <Info className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-sm">
-                <strong>Adding RSS Feeds:</strong> Most podcast platforms provide RSS URLs in their show settings.
-              </AlertDescription>
-            </Alert>
           </>
         )}
       </div>
