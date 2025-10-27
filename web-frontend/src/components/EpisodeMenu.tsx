@@ -8,26 +8,46 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, RotateCcw } from 'lucide-react';
+import { MoreVertical, RotateCcw, RefreshCw } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { summarizeAgain } from '@/lib/api';
+import { summarizeAgain, retryEpisode } from '@/lib/api';
 import { toast } from 'sonner';
 
 interface EpisodeMenuProps {
   episodeId: string;
+  hasTranscript?: boolean;
+  status?: string;
 }
 
-export function EpisodeMenu({ episodeId }: EpisodeMenuProps) {
+export function EpisodeMenu({ episodeId, hasTranscript = true, status }: EpisodeMenuProps) {
   const queryClient = useQueryClient();
-  
-  const { mutate: handleSummarizeAgain, isPending } = useMutation({
+
+  const { mutate: handleSummarizeAgain, isPending: isSummarizePending } = useMutation({
     mutationFn: () => summarizeAgain(episodeId),
     onSuccess: () => {
       toast.success('Episode queued for re-summarization');
       queryClient.invalidateQueries({ queryKey: ['episode', episodeId] });
     },
-    onError: () => toast.error('Failed to queue episode for re-summarization'),
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || 'Failed to queue episode for re-summarization';
+      toast.error(errorMessage);
+    },
   });
+
+  const { mutate: handleRetry, isPending: isRetryPending } = useMutation({
+    mutationFn: () => retryEpisode(episodeId),
+    onSuccess: () => {
+      toast.success('Episode queued for retry');
+      queryClient.invalidateQueries({ queryKey: ['episode', episodeId] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || 'Failed to retry episode';
+      toast.error(errorMessage);
+    },
+  });
+
+  const showRetry = status === 'processing' || status === 'failed';
+  const showSummarizeAgain = status === 'completed' && hasTranscript;
 
   return (
     <DropdownMenu>
@@ -37,10 +57,24 @@ export function EpisodeMenu({ episodeId }: EpisodeMenuProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleSummarizeAgain()} disabled={isPending}>
-          <RotateCcw className="w-4 h-4 mr-2" />
-          {isPending ? 'Queuing...' : 'Summarize Again'}
-        </DropdownMenuItem>
+        {showRetry && (
+          <DropdownMenuItem
+            onClick={() => handleRetry()}
+            disabled={isRetryPending}
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            {isRetryPending ? 'Retrying...' : 'Retry'}
+          </DropdownMenuItem>
+        )}
+        {showSummarizeAgain && (
+          <DropdownMenuItem
+            onClick={() => handleSummarizeAgain()}
+            disabled={isSummarizePending}
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            {isSummarizePending ? 'Queuing...' : 'Summarize Again'}
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

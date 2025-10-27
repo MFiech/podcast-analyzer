@@ -77,7 +77,11 @@ export default function EpisodeDetailPage() {
             <Button variant="ghost" size="icon" onClick={() => router.back()} className="h-10 w-10 -ml-2 flex-shrink-0">
               <ChevronLeft className="w-6 h-6" />
             </Button>
-            <EpisodeMenu episodeId={episodeId} />
+            <EpisodeMenu
+              episodeId={episodeId}
+              hasTranscript={!!episode.transcript}
+              status={episode.status}
+            />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 leading-tight">{episode.title}</h1>
           <p className="text-sm text-gray-600 mt-2">📡 {episode.feed_title || episode.feed_source || 'Unknown'}</p>
