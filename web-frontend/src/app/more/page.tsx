@@ -116,24 +116,47 @@ export default function MorePage() {
         <h2 className="text-lg font-semibold mb-4">External Links</h2>
         <div className="space-y-3">
           {[
-            { title: 'Service Logs', desc: 'View processing logs and errors', icon: FileText },
-            { title: 'Prompt Evaluations', desc: 'Review AI prompt performance', icon: Gauge },
-            { title: 'GitHub Repository', desc: 'View source code and contribute', icon: Users },
+            {
+              title: 'Service Logs',
+              desc: 'View processing logs and errors',
+              icon: FileText,
+              url: process.env.NEXT_PUBLIC_DOZZLE_URL || 'http://localhost:5000'
+            },
+            {
+              title: 'Prompt Evaluations',
+              desc: 'Review AI prompt performance',
+              icon: Gauge,
+              url: process.env.NEXT_PUBLIC_LANGFUSE_URL || 'https://cloud.langfuse.com'
+            },
+            {
+              title: 'GitHub Repository',
+              desc: 'View source code and contribute',
+              icon: Users,
+              url: process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/MFiech/podcast-analyzer'
+            },
           ].map((link) => {
             const Icon = link.icon;
             return (
-              <Card key={link.title} className="p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-5 h-5 text-gray-600" />
+              <a
+                key={link.title}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-gray-900">{link.title}</h3>
+                      <p className="text-sm text-gray-600">{link.desc}</p>
+                    </div>
+                    <ExternalLink className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{link.title}</h3>
-                    <p className="text-sm text-gray-600">{link.desc}</p>
-                  </div>
-                  <ExternalLink className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                </div>
-              </Card>
+                </Card>
+              </a>
             );
           })}
         </div>

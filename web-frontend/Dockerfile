@@ -3,9 +3,15 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Accept API base URL as build argument
-ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:5002
-ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+# Accept build arguments for external service URLs
+# Note: NEXT_PUBLIC_API_BASE_URL is no longer needed as we use runtime detection
+ARG NEXT_PUBLIC_DOZZLE_URL=http://localhost:5000
+ARG NEXT_PUBLIC_LANGFUSE_URL=https://cloud.langfuse.com
+ARG NEXT_PUBLIC_GITHUB_URL=https://github.com/MFiech/podcast-analyzer
+
+ENV NEXT_PUBLIC_DOZZLE_URL=$NEXT_PUBLIC_DOZZLE_URL
+ENV NEXT_PUBLIC_LANGFUSE_URL=$NEXT_PUBLIC_LANGFUSE_URL
+ENV NEXT_PUBLIC_GITHUB_URL=$NEXT_PUBLIC_GITHUB_URL
 
 # Copy package files
 COPY package*.json ./
