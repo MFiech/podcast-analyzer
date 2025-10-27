@@ -110,7 +110,7 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
                 <Eye className="w-4 h-4 mr-2" />
                 Hide
               </DropdownMenuItem>
-              {episode.status === 'failed' && (
+              {(episode.status === 'failed' || episode.status === 'processing') && (
                 <DropdownMenuItem onClick={(e) => {
                   e.preventDefault();
                   handleRetry();
