@@ -123,7 +123,7 @@ export default function EpisodeDetailPage() {
 
       {(episode.audio_path || episode.file_path) && (
         <AudioPlayer
-          audioUrl={`${process.env.NEXT_PUBLIC_API_BASE_URL}/data/${episode.audio_path || episode.file_path}`}
+          audioUrl={`${typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:5002` : 'http://localhost:5002'}/data/${episode.audio_path || episode.file_path}`}
           title={episode.title}
         />
       )}
