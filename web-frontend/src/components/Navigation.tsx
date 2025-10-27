@@ -18,9 +18,9 @@ const navigationItems = [
 ];
 
 const moreItems = [
-  { label: 'Prompt Evals', icon: BarChart3, href: 'https://cloud.langfuse.com/project/cmh3umme800vzad075pjehiow', external: true },
-  { label: 'Server Logs', icon: Info, href: 'http://localhost:5001/', external: true },
-  { label: 'GitHub Repo', icon: Github, href: 'https://github.com/MFiech/podcast-analyzer', external: true },
+  { label: 'Prompt Evals', icon: BarChart3, href: process.env.NEXT_PUBLIC_LANGFUSE_URL || 'https://cloud.langfuse.com/project/cmh3umme800vzad075pjehiow', external: true },
+  { label: 'Server Logs', icon: Info, href: process.env.NEXT_PUBLIC_DOZZLE_URL || 'http://localhost:5000', external: true },
+  { label: 'GitHub Repo', icon: Github, href: process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/MFiech/podcast-analyzer', external: true },
 ];
 
 export function Navigation() {
