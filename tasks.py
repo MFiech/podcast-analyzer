@@ -237,3 +237,77 @@ def resummarize_episode(self, episode_id):
         if episode:
             db.update_episode_status(episode['url'], 'failed', error_message=str(e))
         raise
+
+@celery_app.task(bind=True)
+def reclean_episode(self, episode_id):
+    """
+    Re-clean the raw transcript and re-summarize an existing episode.
+    Does NOT re-download or re-transcribe.
+    LLM calls are automatically traced via @observe decorators.
+    """
+    from bson.objectid import ObjectId
+
+    db = PodcastDB()
+    episode = None
+    try:
+        print(f"🔄 [RECLEAN START] - Episode ID: {episode_id}")
+
+        # Get the episode
+        episode = db.get_episode_by_id(episode_id)
+        if not episode:
+            raise RuntimeError("Episode not found")
+
+        if not episode.get('raw_transcript'):
+            raise RuntimeError("No raw transcript available for re-cleaning")
+
+        # Update status to processing
+        db.update_episode_status(episode['url'], 'processing')
+        start_time = time.time()
+
+        # Initialize components
+        cleaner = TranscriptCleaner()
+        summarizer = PodcastSummarizer()
+
+        # Step 1: Re-clean the raw transcript (traced via @observe)
+        print("\n🧹 Re-cleaning transcript...")
+        clean_transcript = cleaner.clean_transcript(episode['raw_transcript'], episode['title'])
+
+        # Step 2: Fetch custom instructions from the feed if available
+        custom_instructions = ""
+        if episode.get('feed_id'):
+            feed = db.get_feed_by_id(str(episode['feed_id']))
+            if feed:
+                custom_instructions = feed.get('customPromptInstructions', '')
+                print(f"📋 Using custom instructions from feed: {feed.get('title', 'Unknown')}")
+
+        # Step 3: Generate new summary (traced via @observe)
+        print("\n🤖 Re-generating summary...")
+        summary = summarizer.summarize(clean_transcript, episode['title'], custom_instructions=custom_instructions)
+
+        # Step 4: Update the episode with new cleaned transcript and summary
+        update_data = {
+            'transcript': clean_transcript,
+            'summary': summary,
+            'status': 'completed',
+            'updated_at': time.time()
+        }
+
+        db.update_episode(episode['url'], update_data)
+
+        total_time = time.time() - start_time
+        print(f"\n🎉 [RECLEAN SUCCESS] - Re-cleaning and summarization complete! Total time: {total_time:.1f}s")
+
+        # Flush Langfuse traces to ensure they're sent to cloud
+        try:
+            from langfuse import get_client
+            langfuse_client = get_client()
+            langfuse_client.flush()
+            print(f"📊 [LANGFUSE] - Observations flushed to cloud")
+        except Exception as flush_error:
+            print(f"⚠️  [LANGFUSE] - Flush warning: {flush_error}")
+
+    except Exception as e:
+        print(f"❌ [RECLEAN FAILED] - Error re-cleaning episode {episode_id}: {e}")
+        if episode:
+            db.update_episode_status(episode['url'], 'failed', error_message=str(e))
+        raise

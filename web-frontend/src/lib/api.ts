@@ -99,6 +99,16 @@ export const retryEpisode = async (episodeId: string) => {
   return response.data;
 };
 
+export const recleanEpisode = async (episodeId: string) => {
+  const response = await apiClient.post(`/api/episodes/${episodeId}/reclean`);
+  return response.data;
+};
+
+export const deleteEpisode = async (episodeId: string) => {
+  const response = await apiClient.delete(`/api/episodes/${episodeId}`);
+  return response.data;
+};
+
 // Feeds
 export const getFeeds = async () => {
   const response = await apiClient.get('/api/feeds');

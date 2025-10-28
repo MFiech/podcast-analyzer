@@ -8,10 +8,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, RotateCcw, RefreshCw } from 'lucide-react';
+import { MoreVertical, RotateCcw, RefreshCw, Eraser, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { summarizeAgain, retryEpisode } from '@/lib/api';
+import { summarizeAgain, retryEpisode, recleanEpisode, deleteEpisode } from '@/lib/api';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface EpisodeMenuProps {
   episodeId: string;
@@ -21,6 +22,7 @@ interface EpisodeMenuProps {
 
 export function EpisodeMenu({ episodeId, hasTranscript = true, status }: EpisodeMenuProps) {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { mutate: handleSummarizeAgain, isPending: isSummarizePending } = useMutation({
     mutationFn: () => summarizeAgain(episodeId),
@@ -30,6 +32,18 @@ export function EpisodeMenu({ episodeId, hasTranscript = true, status }: Episode
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.error || 'Failed to queue episode for re-summarization';
+      toast.error(errorMessage);
+    },
+  });
+
+  const { mutate: handleReclean, isPending: isRecleanPending } = useMutation({
+    mutationFn: () => recleanEpisode(episodeId),
+    onSuccess: () => {
+      toast.success('Episode queued for re-cleaning');
+      queryClient.invalidateQueries({ queryKey: ['episode', episodeId] });
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || 'Failed to re-clean episode';
       toast.error(errorMessage);
     },
   });
@@ -46,8 +60,20 @@ export function EpisodeMenu({ episodeId, hasTranscript = true, status }: Episode
     },
   });
 
+  const { mutate: handleDelete, isPending: isDeletePending } = useMutation({
+    mutationFn: () => deleteEpisode(episodeId),
+    onSuccess: () => {
+      toast.success('Episode deleted');
+      router.push('/');
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.error || 'Failed to delete episode';
+      toast.error(errorMessage);
+    },
+  });
+
   const showRetry = status === 'processing' || status === 'failed';
-  const showSummarizeAgain = status === 'completed' && hasTranscript;
+  const showCompletedActions = status === 'completed' && hasTranscript;
 
   return (
     <DropdownMenu>
@@ -58,22 +84,47 @@ export function EpisodeMenu({ episodeId, hasTranscript = true, status }: Episode
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {showRetry && (
-          <DropdownMenuItem
-            onClick={() => handleRetry()}
-            disabled={isRetryPending}
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            {isRetryPending ? 'Retrying...' : 'Retry'}
-          </DropdownMenuItem>
+          <>
+            <DropdownMenuItem
+              onClick={() => handleRetry()}
+              disabled={isRetryPending}
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {isRetryPending ? 'Retrying...' : 'Retry'}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleDelete()}
+              disabled={isDeletePending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {isDeletePending ? 'Deleting...' : 'Delete'}
+            </DropdownMenuItem>
+          </>
         )}
-        {showSummarizeAgain && (
-          <DropdownMenuItem
-            onClick={() => handleSummarizeAgain()}
-            disabled={isSummarizePending}
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            {isSummarizePending ? 'Queuing...' : 'Summarize Again'}
-          </DropdownMenuItem>
+        {showCompletedActions && (
+          <>
+            <DropdownMenuItem
+              onClick={() => handleReclean()}
+              disabled={isRecleanPending}
+            >
+              <Eraser className="w-4 h-4 mr-2" />
+              {isRecleanPending ? 'Re-cleaning...' : 'Re-clean'}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleSummarizeAgain()}
+              disabled={isSummarizePending}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              {isSummarizePending ? 'Queuing...' : 'Re-summarize'}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleDelete()}
+              disabled={isDeletePending}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {isDeletePending ? 'Deleting...' : 'Delete'}
+            </DropdownMenuItem>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

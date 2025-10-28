@@ -413,6 +413,92 @@ def api_summarize_again(episode_id):
             mimetype='application/json'
         )
 
+@app.route('/api/episodes/<episode_id>/reclean', methods=['POST'])
+def api_reclean_episode(episode_id):
+    """API endpoint to re-clean and re-summarize an episode."""
+    db = PodcastDB()
+    try:
+        episode = db.get_episode_by_id(episode_id)
+        if not episode:
+            return app.response_class(
+                response=dumps({'error': 'Episode not found'}),
+                status=404,
+                mimetype='application/json'
+            )
+
+        if not episode.get('raw_transcript'):
+            return app.response_class(
+                response=dumps({'error': 'No raw transcript available'}),
+                status=400,
+                mimetype='application/json'
+            )
+
+        from tasks import reclean_episode
+        reclean_episode.delay(episode_id)
+        return app.response_class(
+            response=dumps({'success': True, 'message': 'Episode queued for re-cleaning'}),
+            status=200,
+            mimetype='application/json'
+        )
+    except Exception as e:
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
+
+@app.route('/api/episodes/<episode_id>', methods=['DELETE'])
+def api_delete_episode(episode_id):
+    """API endpoint to delete an episode and its audio files."""
+    db = PodcastDB()
+    try:
+        # Get episode before deleting to access file paths
+        episode = db.get_episode_by_id(episode_id)
+        if not episode:
+            return app.response_class(
+                response=dumps({'error': 'Episode not found'}),
+                status=404,
+                mimetype='application/json'
+            )
+
+        # Delete audio files if they exist
+        import os
+        files_to_delete = []
+        if episode.get('file_path'):
+            files_to_delete.append(f"data/{episode['file_path']}")
+        if episode.get('audio_path') and episode.get('audio_path') != episode.get('file_path'):
+            files_to_delete.append(f"data/{episode['audio_path']}")
+
+        for file_path in files_to_delete:
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    print(f"Deleted file: {file_path}")
+                except Exception as e:
+                    print(f"Warning: Could not delete file {file_path}: {e}")
+
+        # Delete episode from database
+        result = db.delete_episode(episode_id)
+
+        if result.deleted_count > 0:
+            return app.response_class(
+                response=dumps({'success': True, 'message': 'Episode deleted'}),
+                status=200,
+                mimetype='application/json'
+            )
+        else:
+            return app.response_class(
+                response=dumps({'error': 'Failed to delete episode'}),
+                status=500,
+                mimetype='application/json'
+            )
+    except Exception as e:
+        return app.response_class(
+            response=dumps({'error': str(e)}),
+            status=500,
+            mimetype='application/json'
+        )
+
 # RSS Feeds API Endpoints
 @app.route('/api/feeds', methods=['GET'])
 def api_feeds():
