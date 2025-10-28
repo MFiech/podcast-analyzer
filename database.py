@@ -148,7 +148,7 @@ class PodcastDB:
         )
 
     # RSS Feed Management Methods
-    def add_feed(self, feed_url, title=""):
+    def add_feed(self, feed_url, title="", custom_instructions=""):
         """Add a new RSS feed."""
         if self.feed_exists(feed_url):
             return self.get_feed(feed_url)
@@ -157,6 +157,7 @@ class PodcastDB:
             'url': feed_url,
             'title': title,
             'active': True,
+            'customPromptInstructions': custom_instructions,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }

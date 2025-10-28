@@ -19,6 +19,7 @@ interface FeedModalProps {
 }
 
 export function FeedModal({ isOpen, onClose, feed }: FeedModalProps) {
+  console.log('FeedModal rendered with feed:', feed);
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -28,16 +29,20 @@ export function FeedModal({ isOpen, onClose, feed }: FeedModalProps) {
   });
 
   useEffect(() => {
-    if (feed) {
-      setFormData({
-        feed_url: feed.url,
-        feed_title: feed.title,
-        custom_prompt: '',
-      });
-    } else {
-      setFormData({ feed_url: '', feed_title: '', custom_prompt: '' });
+    if (isOpen) {
+      if (feed) {
+        console.log('FeedModal - feed object:', feed);
+        console.log('FeedModal - customPromptInstructions:', feed.customPromptInstructions);
+        setFormData({
+          feed_url: feed.url,
+          feed_title: feed.title,
+          custom_prompt: feed.customPromptInstructions || '',
+        });
+      } else {
+        setFormData({ feed_url: '', feed_title: '', custom_prompt: '' });
+      }
     }
-  }, [feed, isOpen]);
+  }, [isOpen]);
 
   const { mutate: handleSubmit, isPending } = useMutation({
     mutationFn: async () => {

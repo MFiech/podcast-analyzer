@@ -47,6 +47,7 @@ export interface Feed {
   episode_count: number;
   last_updated?: string;
   status?: 'active' | 'error';
+  customPromptInstructions?: string;
 }
 
 export interface FeederStatus {

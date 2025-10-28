@@ -32,11 +32,11 @@ class PodcastSummarizer:
             print(f"[{timestamp}] SUMMARIZER: {message}")
     
     @observe(as_type="generation", name="podcast_summarization")
-    def summarize(self, transcript, title="Podcast Episode"):
+    def summarize(self, transcript, title="Podcast Episode", custom_instructions=""):
         """Generate summary from transcript using OpenAI API with Langfuse Chat Prompt Management"""
-        return self._internal_summarize(transcript, title)
+        return self._internal_summarize(transcript, title, custom_instructions)
 
-    def _internal_summarize(self, transcript, title="Podcast Episode"):
+    def _internal_summarize(self, transcript, title="Podcast Episode", custom_instructions=""):
         """Core summarization logic shared by both methods"""
         self._debug_log(f"Starting summarization for: {title}")
         self._debug_log(f"Transcript length: {len(transcript)} characters, {len(transcript.split())} words")
@@ -59,7 +59,8 @@ class PodcastSummarizer:
                 # Compile the chat prompt with variables (returns array of messages)
                 messages = prompt_obj.compile(
                     title=title,
-                    transcript=transcript
+                    transcript=transcript,
+                    customInstructions=custom_instructions
                 )
 
                 # Store prompt object for automatic linking

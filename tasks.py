@@ -56,17 +56,23 @@ def _analyze_episode_with_tracing(url, force):
             return {"status": "already_processed", "url": url}
 
         # Step 1: Download
-        # Get the original title from placeholder before download
+        # Get the original metadata from placeholder before download
         original_episode = db.get_episode(url)
         original_title = original_episode.get('title', '') if original_episode else ''
-        
+        original_feed_id = original_episode.get('feed_id') if original_episode else None
+        original_feed_title = original_episode.get('feed_title', '') if original_episode else ''
+
         episode_data = downloader.download(url)
         if not episode_data:
             raise RuntimeError("Failed to download episode")
-        
-        # Preserve the original RSS title if it exists (don't use the downloaded file's title)
+
+        # Preserve the original RSS metadata if it exists (don't use the downloaded file's metadata)
         if original_title:
             episode_data['title'] = original_title
+        if original_feed_id:
+            episode_data['feed_id'] = original_feed_id
+        if original_feed_title:
+            episode_data['feed_title'] = original_feed_title
 
         # Step 2: Transcribe (or load existing)
         transcript_path = transcriber.get_transcript_path(episode_data['title'])
@@ -110,7 +116,16 @@ def _analyze_episode_with_tracing(url, force):
 
         # Step 4: Summarize (traced via @observe decorator)
         print("\n🤖 Generating summary...")
-        summary = summarizer.summarize(clean_transcript, episode_data['title'])
+        # Fetch custom instructions from the feed if available
+        custom_instructions = ""
+        if episode_data.get('feed_id'):
+            feed = db.get_feed_by_id(str(episode_data['feed_id']))
+            if feed:
+                custom_instructions = feed.get('customPromptInstructions', '')
+                if custom_instructions:
+                    print(f"📋 Using custom instructions from feed: {feed.get('title', 'Unknown')}")
+
+        summary = summarizer.summarize(clean_transcript, episode_data['title'], custom_instructions=custom_instructions)
         episode_data['summary'] = summary
 
         episode_data['duration'] = episode_data.get('duration', 0)
@@ -177,18 +192,25 @@ def resummarize_episode(self, episode_id):
         start_time = time.time()
 
         # Initialize components
-        cleaner = TranscriptCleaner()
         summarizer = PodcastSummarizer()
 
-        # Step 1: Clean the raw transcript again (traced via @observe)
-        print("\n🧹 Re-cleaning transcript...")
-        clean_transcript = cleaner.clean_transcript(episode['raw_transcript'], episode['title'])
+        # Step 1: Use existing cleaned transcript (no re-cleaning needed)
+        print("\n📄 Using existing cleaned transcript...")
+        clean_transcript = episode.get('transcript', episode['raw_transcript'])
 
-        # Step 2: Generate new summary (traced via @observe)
+        # Step 2: Fetch custom instructions from the feed if available
+        custom_instructions = ""
+        if episode.get('feed_id'):
+            feed = db.get_feed_by_id(str(episode['feed_id']))
+            if feed:
+                custom_instructions = feed.get('customPromptInstructions', '')
+                print(f"📋 Using custom instructions from feed: {feed.get('title', 'Unknown')}")
+
+        # Step 3: Generate new summary (traced via @observe)
         print("\n🤖 Re-generating summary...")
-        summary = summarizer.summarize(clean_transcript, episode['title'])
+        summary = summarizer.summarize(clean_transcript, episode['title'], custom_instructions=custom_instructions)
 
-        # Step 3: Update the episode with new cleaned transcript and summary
+        # Step 4: Update the episode with new summary
         update_data = {
             'transcript': clean_transcript,
             'summary': summary,
