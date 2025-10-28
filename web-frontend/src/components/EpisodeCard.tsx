@@ -11,10 +11,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
-import { MoreVertical, RotateCcw, Eye, AlertCircle } from 'lucide-react';
+import { MoreVertical, RotateCcw, RefreshCw, Eraser, Trash2, AlertCircle } from 'lucide-react';
 import { Episode } from '@/lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { hideEpisode, retryEpisode } from '@/lib/api';
+import { retryEpisode, recleanEpisode, deleteEpisode, summarizeAgain } from '@/lib/api';
 import { toast } from 'sonner';
 
 interface EpisodeCardProps {
@@ -31,15 +31,6 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
   const queryClient = useQueryClient();
   const statusInfo = statusConfig[episode.status as keyof typeof statusConfig];
 
-  const { mutate: handleHide } = useMutation({
-    mutationFn: () => hideEpisode(episode.id),
-    onSuccess: () => {
-      toast.success('Episode hidden');
-      queryClient.invalidateQueries({ queryKey: ['episodes'] });
-    },
-    onError: () => toast.error('Failed to hide episode'),
-  });
-
   const { mutate: handleRetry } = useMutation({
     mutationFn: () => retryEpisode(episode.id),
     onSuccess: () => {
@@ -47,6 +38,33 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
       queryClient.invalidateQueries({ queryKey: ['episodes'] });
     },
     onError: () => toast.error('Failed to retry episode'),
+  });
+
+  const { mutate: handleReclean } = useMutation({
+    mutationFn: () => recleanEpisode(episode.id),
+    onSuccess: () => {
+      toast.success('Episode queued for re-cleaning');
+      queryClient.invalidateQueries({ queryKey: ['episodes'] });
+    },
+    onError: () => toast.error('Failed to re-clean episode'),
+  });
+
+  const { mutate: handleResummarize } = useMutation({
+    mutationFn: () => summarizeAgain(episode.id),
+    onSuccess: () => {
+      toast.success('Episode queued for re-summarization');
+      queryClient.invalidateQueries({ queryKey: ['episodes'] });
+    },
+    onError: () => toast.error('Failed to re-summarize episode'),
+  });
+
+  const { mutate: handleDelete } = useMutation({
+    mutationFn: () => deleteEpisode(episode.id),
+    onSuccess: () => {
+      toast.success('Episode deleted');
+      queryClient.invalidateQueries({ queryKey: ['episodes'] });
+    },
+    onError: () => toast.error('Failed to delete episode'),
   });
   
   // Helper functions to format data
@@ -112,22 +130,48 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => {
-                e.preventDefault();
-                handleHide();
-              }}>
-                <Eye className="w-4 h-4 mr-2" />
-                Hide
-              </DropdownMenuItem>
-              {(episode.status === 'failed' || episode.status === 'processing') && (
-                <DropdownMenuItem onClick={(e) => {
-                  e.preventDefault();
-                  handleRetry();
-                }}>
-                  <RotateCcw className="w-4 h-4 mr-2" />
-                  Retry
-                </DropdownMenuItem>
-              )}
+              {(episode.status === 'failed' || episode.status === 'processing') ? (
+                <>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.preventDefault();
+                    handleRetry();
+                  }}>
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Retry
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.preventDefault();
+                    handleDelete();
+                  }}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : episode.status === 'completed' ? (
+                <>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.preventDefault();
+                    handleReclean();
+                  }}>
+                    <Eraser className="w-4 h-4 mr-2" />
+                    Re-clean
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.preventDefault();
+                    handleResummarize();
+                  }}>
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Re-summarize
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => {
+                    e.preventDefault();
+                    handleDelete();
+                  }}>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

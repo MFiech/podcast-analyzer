@@ -147,6 +147,11 @@ class PodcastDB:
             {'$set': {'status': 'pending', 'updated_at': datetime.utcnow()}}
         )
 
+    def delete_episode(self, episode_id):
+        """Delete an episode from the database."""
+        from bson.objectid import ObjectId
+        return self.episodes.delete_one({'_id': ObjectId(episode_id)})
+
     # RSS Feed Management Methods
     def add_feed(self, feed_url, title="", custom_instructions=""):
         """Add a new RSS feed."""
