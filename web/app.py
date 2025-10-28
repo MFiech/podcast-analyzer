@@ -296,7 +296,12 @@ def api_episodes():
         # Convert any remaining ObjectId fields
         if 'feed_id' in ep and isinstance(ep['feed_id'], ObjectId):
             ep['feed_id'] = str(ep['feed_id'])
-    
+        # Convert datetime objects to ISO-8601 strings
+        if 'created_at' in ep and ep['created_at']:
+            ep['created_at'] = ep['created_at'].isoformat()
+        if 'updated_at' in ep and ep['updated_at']:
+            ep['updated_at'] = ep['updated_at'].isoformat()
+
     # Use bson.json_util to serialize the response
     return app.response_class(
         response=dumps({'episodes': paginated, 'total': total, 'completed_count': completed_count, 'processing_count': processing_count}),
@@ -315,11 +320,16 @@ def api_episode_detail(episode_id):
         
         episode['id'] = str(episode['_id'])
         episode.pop('_id', None)
-        
+
         # Convert any remaining ObjectId fields
         if 'feed_id' in episode and isinstance(episode['feed_id'], ObjectId):
             episode['feed_id'] = str(episode['feed_id'])
-        
+        # Convert datetime objects to ISO-8601 strings
+        if 'created_at' in episode and episode['created_at']:
+            episode['created_at'] = episode['created_at'].isoformat()
+        if 'updated_at' in episode and episode['updated_at']:
+            episode['updated_at'] = episode['updated_at'].isoformat()
+
         # Use bson.json_util to serialize the response
         return app.response_class(
             response=dumps(episode),

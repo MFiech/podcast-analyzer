@@ -57,13 +57,22 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
     return `${mins}:${String(secs).padStart(2, '0')}`;
   };
   
-  const formatDate = (dateStr: string | undefined) => {
+  const formatDate = (dateStr: string | any | undefined) => {
     if (!dateStr) return 'Unknown';
     try {
+      // Handle BSON extended JSON format: {"$date": "..."}
+      if (typeof dateStr === 'object' && dateStr.$date) {
+        const date = new Date(dateStr.$date);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      }
+      // Handle ISO-8601 string format
       const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return 'Unknown';
+      }
       return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     } catch {
-      return dateStr;
+      return 'Unknown';
     }
   };
 
