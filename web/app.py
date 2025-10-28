@@ -431,6 +431,7 @@ def api_add_feed():
     data = request.get_json()
     feed_url = data.get('feed_url')
     feed_title = data.get('feed_title', '')
+    custom_prompt = data.get('custom_prompt', '')
     
     if not feed_url:
         return app.response_class(
@@ -448,7 +449,7 @@ def api_add_feed():
                 mimetype='application/json'
             )
         
-        feed = db.add_feed(feed_url, feed_title)
+        feed = db.add_feed(feed_url, feed_title, custom_prompt)
         feed['id'] = str(feed['_id'])
         feed.pop('_id', None)
         feed['episode_count'] = 0
@@ -469,12 +470,15 @@ def api_update_feed(feed_id):
     """API endpoint to update a feed."""
     db = PodcastDB()
     data = request.get_json()
+    print(f"DEBUG: Received data: {data}")
     
     try:
         update_data = {
             'title': data.get('feed_title', ''),
-            'url': data.get('feed_url')
+            'url': data.get('feed_url'),
+            'customPromptInstructions': data.get('custom_prompt', '')
         }
+        print(f"DEBUG: Update data: {update_data}")
         result = db.update_feed(feed_id, update_data)
         
         if result.modified_count == 0:

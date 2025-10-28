@@ -110,7 +110,14 @@ def _analyze_episode_with_tracing(url, force):
 
         # Step 4: Summarize (traced via @observe decorator)
         print("\n🤖 Generating summary...")
-        summary = summarizer.summarize(clean_transcript, episode_data['title'])
+        # Fetch custom instructions from the feed if available
+        custom_instructions = ""
+        if episode_data.get('feed_id'):
+            feed = db.get_feed_by_id(str(episode_data['feed_id']))
+            if feed:
+                custom_instructions = feed.get('customPromptInstructions', '')
+        
+        summary = summarizer.summarize(clean_transcript, episode_data['title'], custom_instructions=custom_instructions)
         episode_data['summary'] = summary
 
         episode_data['duration'] = episode_data.get('duration', 0)
