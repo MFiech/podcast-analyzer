@@ -235,3 +235,313 @@ How‑to item (with optional fields):
 - online_thumb, feedback_comment
 - WeightedQuality (computed in dashboards)
 
+
+---
+## Appendix D — LLM-as-a-Judge Evaluator Prompts (copy/paste into Langfuse)
+
+### How to use
+For each evaluator below, fill in Langfuse's three fields:
+1. **Evaluation prompt** — what the judge should do
+2. **Score reasoning prompt** — ask for brief justification (chain-of-thought)
+3. **Score range prompt** — format of the numeric output
+
+When running an Experiment, pass variables like `{{summary}}`, `{{transcript}}`, etc. to populate templates.
+
+---
+### ev_actionability_v1 (1–5)
+**Purpose**: Rate usefulness for action; for howto = replicability, for catchup = quick takeaways.
+
+**Variables to pass**: `summary`, `transcript`, `desired_style`
+
+**Evaluation prompt**:
+```
+You are evaluating a podcast summary for ACTIONABILITY on a 1–5 scale.
+Inputs:
+- Transcript (ground truth): {{transcript}}
+- Summary to evaluate: {{summary}}
+- Desired style: {{desired_style}} ("catchup" or "howto")
+
+Rubric:
+- If howto: Are steps clear, ordered, and reproducible? Include concrete tools/configs, realistic sequencing, pitfalls, and outcomes.
+- If catchup: Does it quickly tell me what happened and why it matters, with clear next actions or "where to read more"?
+Scoring anchors:
+1 = Not actionable; vague or generic; cannot act on it.
+3 = Some actionable pieces but gaps, missing details, or unclear sequencing.
+5 = Highly actionable; concrete steps or clear takeaways; minimal gaps.
+
+Only judge based on the provided transcript; ignore style or grammar beyond actionability.
+```
+
+**Score reasoning prompt**:
+```
+In 1–2 sentences, justify the actionability score referencing specific aspects (e.g., steps present/missing, specificity, next actions).
+```
+
+**Score range prompt**:
+```
+Return only an integer 1–5 with no other text.
+```
+
+---
+### ev_faithfulness_v1 (1–5)
+**Purpose**: Check claims are grounded in transcript; penalize hallucinations.
+
+**Variables to pass**: `summary`, `transcript`
+
+**Evaluation prompt**:
+```
+You are evaluating FAITHFULNESS of a summary to its transcript on a 1–5 scale.
+Inputs:
+- Transcript: {{transcript}}
+- Summary: {{summary}}
+
+Rubric:
+- Penalize any claim not supported by the transcript (hallucinations) or contradictions.
+- Reward when all claims are grounded, conservative, and aligned with transcript wording.
+Anchors:
+1 = Many unsupported/incorrect claims.
+3 = Mostly grounded but a few questionable or overstated claims.
+5 = Fully grounded; no unsupported claims.
+
+List (briefly) any hallucinations in your reasoning, if present.
+```
+
+**Score reasoning prompt**:
+```
+In 1–3 sentences, note any unsupported claims (or "none"), optionally count them, and cite short phrases from the transcript (not full quotes).
+```
+
+**Score range prompt**:
+```
+Return only an integer 1–5 with no other text.
+```
+
+---
+### ev_conciseness_v1 (1–5)
+**Purpose**: Rate brevity, redundancy removal, and adherence to word caps.
+
+**Variables to pass**: `summary`, `tldr_word_cap` (optional but recommended)
+
+**Evaluation prompt**:
+```
+You are evaluating CONCISENESS on a 1–5 scale.
+Input summary: {{summary}}
+If the summary contains a TL;DR, prefer it to be ≤ {{tldr_word_cap}} words (if provided). Penalize obvious redundancy, filler, or repetition.
+Anchors:
+1 = Verbose; repeats ideas; significantly exceeds reasonable brevity.
+3 = Mixed; some concise parts but noticeable fluff or minor cap exceedance.
+5 = Crisp and efficient; no fluff; within intended caps; information-dense.
+```
+
+**Score reasoning prompt**:
+```
+In 1–2 sentences, mention redundancy, padding, and whether the TL;DR exceeded the cap (if applicable).
+```
+
+**Score range prompt**:
+```
+Return only an integer 1–5 with no other text.
+```
+
+---
+### ev_format_adherence_v1 (0/1 — binary)
+**Purpose**: Check all required sections are present.
+
+**Variables to pass**: `summary`, `desired_style`
+
+**Evaluation prompt**:
+```
+Check FORMAT ADHERENCE (binary 0/1).
+Summary: {{summary}}
+Desired style: {{desired_style}}
+
+Required sections (case-insensitive):
+- If "catchup": 
+  1) TL;DR 
+  2) Key Topics (bullets) 
+  3) Where to Read More (links) 
+  4) References & Tools (links/tool names)
+- If "howto": 
+  1) TL;DR 
+  2) Step-by-step Instructions (bulleted imperative steps) 
+  3) Pitfalls/Notes 
+  4) References & Tools
+
+Return 1 ONLY if all required sections are present and clearly labeled; else 0.
+```
+
+**Score reasoning prompt**:
+```
+If 0, list which sections are missing or mislabeled; if 1, say "all required sections present."
+```
+
+**Score range prompt**:
+```
+Return only 0 or 1 with no other text.
+```
+
+---
+### ev_format_score_v1 (1–5)
+**Purpose**: Rate quality of structure (headers, bullets, ordering).
+
+**Variables to pass**: `summary`, `desired_style`
+
+**Evaluation prompt**:
+```
+Rate FORMAT QUALITY on 1–5.
+Consider: correct section headers, clear bulleting, logical ordering, readable structure, and section completeness.
+Ignore content quality; focus on structure vs the required sections for {{desired_style}}.
+Anchors:
+1 = Disorganized; sections unclear/missing; poor structure.
+3 = Generally structured but with issues (labels off, mixed content).
+5 = Excellent structure; clean headers, bullets, ordering; sections complete.
+```
+
+**Score reasoning prompt**:
+```
+In 1–2 sentences, describe structural strengths/weaknesses and any header/bullet issues.
+```
+
+**Score range prompt**:
+```
+Return only an integer 1–5 with no other text.
+```
+
+---
+### ev_category_match_v1 (0/1 — binary)
+**Purpose**: Confirm output matches the requested style (catchup vs howto).
+
+**Variables to pass**: `summary`, `desired_style`
+
+**Evaluation prompt**:
+```
+Does the summary MATCH the requested style (binary 0/1)?
+- If desired_style = "catchup": expect topical digest + where to read more (not step-by-step).
+- If desired_style = "howto": expect imperative, step-by-step instructions with practical details.
+Return 1 if it matches the requested style; else 0.
+```
+
+**Score reasoning prompt**:
+```
+1–2 sentences: state requested style and why the summary matches or not.
+```
+
+**Score range prompt**:
+```
+Return only 0 or 1 with no other text.
+```
+
+---
+### ev_coverage_v1 (1–5)
+**Purpose**: Check key topics/steps are included; penalize major gaps.
+
+**Variables to pass**: `summary`, `transcript`, `desired_style`
+
+**Evaluation prompt**:
+```
+Evaluate COVERAGE on 1–5.
+- Catchup: Are the main topics/themes of the transcript represented?
+- Howto: Are the major phases/steps included (beginning-to-end)?
+Penalize missing major topics/steps; do not penalize for omitting trivial details.
+Anchors:
+1 = Major topics/steps missing.
+3 = Covers most essentials; a few notable gaps.
+5 = Comprehensive for the intended style; minimal gaps.
+Inputs:
+- Transcript: {{transcript}}
+- Summary: {{summary}}
+```
+
+**Score reasoning prompt**:
+```
+In 1–3 sentences, name any missed key topics/steps (or "none") and note brief examples.
+```
+
+**Score range prompt**:
+```
+Return only an integer 1–5 with no other text.
+```
+
+---
+### ev_preference_v1 (0/1 — pairwise)
+**Purpose**: Given two summaries, pick the better one using priorities: Actionability > Faithfulness > Conciseness > Format.
+
+**Variables to pass**: `summary_a`, `summary_b`, `transcript`, `desired_style`
+
+**Evaluation prompt**:
+```
+Choose the BETTER summary for the intended goals (Actionability > Faithfulness > Conciseness > Format).
+Inputs:
+- Transcript: {{transcript}}
+- Summary A: {{summary_a}}
+- Summary B: {{summary_b}}
+- Desired style: {{desired_style}}
+
+Rules:
+- You MUST pick exactly one winner based on the priority order above.
+- Break ties using Actionability first, then Faithfulness, then Conciseness, then Format.
+- Ignore stylistic flourishes; focus on usefulness, grounding, brevity, and required structure for the style.
+Return 0 if A is better; 1 if B is better.
+```
+
+**Score reasoning prompt**:
+```
+In 1–3 sentences, explain the deciding factors and note preference strength (weak/moderate/strong).
+```
+
+**Score range prompt**:
+```
+Return only 0 or 1 with no other text.
+```
+
+---
+### Manual Rating (Human Annotation)
+**Purpose**: Occasional human scoring for calibration.
+
+**Approach**: Use Langfuse Human Annotation for these three lightweight evaluators:
+- `ev_manual_actionability_v1` → 1–5 scale + short note
+- `ev_manual_faithfulness_v1` → 1–5 scale + short note
+- `ev_manual_conciseness_v1` → 1–5 scale + short note
+
+**Instructions to annotator**:
+```
+Read the full transcript and the summary provided.
+Rate the metric (Actionability / Faithfulness / Conciseness) on 1–5 using the rubrics from Appendix B.
+Add a brief note (1–2 sentences) explaining your score.
+```
+
+---
+### Auto/Custom Counters (no LLM-judge)
+Implement these as **Custom Scores** via SDK (computed deterministically):
+- `word_count`: Total words in the summary.
+- `compression_ratio`: word_count(summary) / word_count(transcript).
+- `references_count`: Count of URLs (regex: `https?://[^\s]+`) + distinct items in "References & Tools" section.
+- `tools_count`: Count of distinct product/framework names extracted from "References & Tools" (simple list or light NER).
+
+---
+### Implementation Notes
+- Use a strong judge model (e.g., `gpt-4o-mini` or higher) with low temperature (0–0.2) for consistency.
+- Keep prompts concise to reduce eval token costs.
+- For Faithfulness, if you need the `hallucination_count` as a separate numeric Score, add:
+  ```
+  ev_hallucination_count_v1: "Count unsupported claims in the summary vs transcript. Return only an integer ≥ 0."
+  ```
+- Langfuse UI typically expects one numeric output per evaluator, so we split "Format" into two: adherence (0/1) and quality (1–5).
+
+---
+## Appendix E — Score Keys Reference (for dashboards & aggregation)
+Use these exact keys when setting up evaluators:
+```
+actionability_score, actionability_notes
+faithfulness_score, hallucination_count, hallucination_examples
+conciseness_score, redundancy_notes
+format_adherence (0/1), format_score (1–5), missing_sections
+category_match (0/1), predicted_category
+coverage_score, missed_topics
+preference_winner ("A"/"B"), preference_strength (1–3), preference_reason
+human_actionability, human_faithfulness, human_conciseness, human_notes
+word_count, compression_ratio, references_count, tools_count
+online_thumb (-1/0/+1), feedback_comment
+WeightedQuality (computed: 0.5*actionability + 0.3*faithfulness + 0.2*conciseness)
+```
+
