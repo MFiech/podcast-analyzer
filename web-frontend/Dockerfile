@@ -43,6 +43,10 @@ RUN npm ci --only=production
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 
+# Set ownership and switch to non-root user
+RUN chown -R node:node /app
+USER node
+
 # Expose port 3000
 EXPOSE 3000
 
