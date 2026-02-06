@@ -528,7 +528,8 @@ def api_add_feed():
     feed_url = data.get('feed_url')
     feed_title = data.get('feed_title', '')
     custom_prompt = data.get('custom_prompt', '')
-    
+    category = data.get('category', '')
+
     if not feed_url:
         return app.response_class(
             response=dumps({'error': 'Feed URL is required'}),
@@ -545,7 +546,7 @@ def api_add_feed():
                 mimetype='application/json'
             )
         
-        feed = db.add_feed(feed_url, feed_title, custom_prompt)
+        feed = db.add_feed(feed_url, feed_title, custom_prompt, category)
         feed['id'] = str(feed['_id'])
         feed.pop('_id', None)
         feed['episode_count'] = 0
@@ -572,7 +573,8 @@ def api_update_feed(feed_id):
         update_data = {
             'title': data.get('feed_title', ''),
             'url': data.get('feed_url'),
-            'customPromptInstructions': data.get('custom_prompt', '')
+            'customPromptInstructions': data.get('custom_prompt', ''),
+            'category': data.get('category', '')
         }
         print(f"DEBUG: Update data: {update_data}")
         result = db.update_feed(feed_id, update_data)

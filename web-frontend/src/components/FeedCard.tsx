@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { MoreVertical, Edit2, Trash2 } from 'lucide-react';
-import { Feed } from '@/lib/api';
+import { Feed, FEED_CATEGORIES } from '@/lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { deleteFeed } from '@/lib/api';
 import { toast } from 'sonner';
@@ -49,9 +49,14 @@ export function FeedCard({ feed, onEdit }: FeedCardProps) {
             <h3 className="font-semibold text-gray-900 line-clamp-1">{feed.title}</h3>
           </div>
           <p className="text-xs text-gray-500 line-clamp-1 mb-2">{feed.url}</p>
-          <p className="text-xs text-gray-600">
-            {feed.episode_count} episodes • Last updated: {feed.last_updated || 'Never'}
-          </p>
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <span>{feed.episode_count} episodes</span>
+            {feed.category && (
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                {FEED_CATEGORIES.find(c => c.value === feed.category)?.label || feed.category}
+              </Badge>
+            )}
+          </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

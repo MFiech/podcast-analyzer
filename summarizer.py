@@ -7,6 +7,24 @@ from datetime import datetime
 from langfuse.openai import openai  # Langfuse OpenAI wrapper for automatic tracing
 from langfuse import Langfuse, observe
 
+# Map category keys to Langfuse prompt names
+CATEGORY_PROMPT_MAP = {
+    '': 'podcast-summarization',
+    'general': 'podcast-summarization',
+    'news': 'podcast-summarization-news',
+    'products_ai': 'podcast-summarization-products-ai',
+    'spanish_learning': 'podcast-summarization-spanish-learning',
+}
+
+# Display names for fallback logging
+CATEGORY_DISPLAY_NAMES = {
+    '': 'General',
+    'general': 'General',
+    'news': 'News',
+    'products_ai': 'Products & AI',
+    'spanish_learning': 'Spanish Learning',
+}
+
 class PodcastSummarizer:
     def __init__(self):
         self.debug = True
@@ -24,22 +42,28 @@ class PodcastSummarizer:
                 self.langfuse = None
         else:
             self.langfuse = None
-        
+
     def _debug_log(self, message):
         """Debug logging with timestamp"""
         if self.debug:
             timestamp = datetime.now().strftime("%H:%M:%S")
             print(f"[{timestamp}] SUMMARIZER: {message}")
-    
-    @observe(as_type="generation", name="podcast_summarization")
-    def summarize(self, transcript, title="Podcast Episode", custom_instructions=""):
-        """Generate summary from transcript using OpenAI API with Langfuse Chat Prompt Management"""
-        return self._internal_summarize(transcript, title, custom_instructions)
 
-    def _internal_summarize(self, transcript, title="Podcast Episode", custom_instructions=""):
+    @observe(as_type="generation", name="podcast_summarization")
+    def summarize(self, transcript, title="Podcast Episode", custom_instructions="", category=""):
+        """Generate summary from transcript using OpenAI API with Langfuse Chat Prompt Management"""
+        return self._internal_summarize(transcript, title, custom_instructions, category)
+
+    def _internal_summarize(self, transcript, title="Podcast Episode", custom_instructions="", category=""):
         """Core summarization logic shared by both methods"""
         self._debug_log(f"Starting summarization for: {title}")
         self._debug_log(f"Transcript length: {len(transcript)} characters, {len(transcript.split())} words")
+
+        # Resolve category to prompt name
+        category_key = (category or '').strip().lower()
+        prompt_name = CATEGORY_PROMPT_MAP.get(category_key, 'podcast-summarization')
+        category_display = CATEGORY_DISPLAY_NAMES.get(category_key, 'General')
+        self._debug_log(f"📂 Category: [{category_display}] → prompt: {prompt_name}")
 
         # Calculate estimated tokens (rough approximation: 1 token ≈ 4 characters)
         estimated_input_tokens = len(transcript) // 4
@@ -51,10 +75,10 @@ class PodcastSummarizer:
 
         try:
             if self.langfuse_enabled and self.langfuse:
-                self._debug_log("📋 Fetching chat prompt from Langfuse Prompt Management...")
+                self._debug_log(f"📋 Fetching chat prompt '{prompt_name}' from Langfuse Prompt Management...")
 
-                # Get chat prompt and compile with variables
-                prompt_obj = self.langfuse.get_prompt("podcast-summarization", label="production", type="chat")
+                # Get category-specific chat prompt and compile with variables
+                prompt_obj = self.langfuse.get_prompt(prompt_name, label="production", type="chat")
 
                 # Compile the chat prompt with variables (returns array of messages)
                 messages = prompt_obj.compile(
@@ -66,17 +90,17 @@ class PodcastSummarizer:
                 # Store prompt object for automatic linking
                 langfuse_prompt = prompt_obj
 
-                self._debug_log(f"✅ Successfully loaded chat prompt from Langfuse ({len(messages)} messages)")
+                self._debug_log(f"✅ Successfully loaded chat prompt '{prompt_name}' from Langfuse ({len(messages)} messages)")
             else:
                 raise Exception("Langfuse not enabled, using fallback prompts")
 
         except Exception as e:
             self._debug_log(f"⚠️  Failed to load Langfuse chat prompt, using fallback: {str(e)}")
-            # Fallback to hardcoded messages
+            # Fallback to hardcoded messages with category prefix
             messages = [
                 {
                     "role": "system",
-                    "content": """You are a professional podcast analyst.
+                    "content": f"""[{category_display}] You are a professional podcast analyst.
 Your job is to create structured summaries of cleaned podcast transcripts.
 Your summaries must adapt to the type of content:
 
@@ -206,7 +230,7 @@ Here is the transcript:
             )
 
             # Log prompt source for debugging
-            prompt_source = "langfuse_chat_prompt" if langfuse_prompt else "fallback"
+            prompt_source = f"langfuse:{prompt_name}" if langfuse_prompt else "fallback"
             self._debug_log(f"🔗 Used prompt from: {prompt_source}")
 
             elapsed = time.time() - start_time
@@ -230,4 +254,3 @@ Here is the transcript:
         except Exception as e:
             self._debug_log(f"❌ Error with OpenAI summarization: {str(e)}")
             raise RuntimeError(f"Failed to generate summary with OpenAI: {str(e)}")
-    

@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { addFeed, updateFeed, Feed } from '@/lib/api';
+import { addFeed, updateFeed, Feed, FeedCategory, FEED_CATEGORIES } from '@/lib/api';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
@@ -26,6 +27,7 @@ export function FeedModal({ isOpen, onClose, feed }: FeedModalProps) {
     feed_url: '',
     feed_title: '',
     custom_prompt: '',
+    category: '_none',
   });
 
   useEffect(() => {
@@ -37,9 +39,10 @@ export function FeedModal({ isOpen, onClose, feed }: FeedModalProps) {
           feed_url: feed.url,
           feed_title: feed.title,
           custom_prompt: feed.customPromptInstructions || '',
+          category: feed.category || '_none',
         });
       } else {
-        setFormData({ feed_url: '', feed_title: '', custom_prompt: '' });
+        setFormData({ feed_url: '', feed_title: '', custom_prompt: '', category: '_none' });
       }
     }
   }, [isOpen]);
@@ -49,10 +52,16 @@ export function FeedModal({ isOpen, onClose, feed }: FeedModalProps) {
       if (!formData.feed_url.trim()) {
         throw new Error('Feed URL is required');
       }
+      // Convert _none sentinel back to empty string for API
+      const category = (formData.category === '_none' ? '' : formData.category) as FeedCategory;
+      const payload = {
+        ...formData,
+        category,
+      };
       if (feed) {
-        return updateFeed(feed.id, formData);
+        return updateFeed(feed.id, payload);
       } else {
-        return addFeed(formData);
+        return addFeed(payload);
       }
     },
     onSuccess: () => {
@@ -84,6 +93,24 @@ export function FeedModal({ isOpen, onClose, feed }: FeedModalProps) {
           value={formData.feed_title}
           onChange={(e) => setFormData({ ...formData, feed_title: e.target.value })}
         />
+      </div>
+      <div>
+        <Label htmlFor="category">Category</Label>
+        <Select
+          value={formData.category}
+          onValueChange={(value) => setFormData({ ...formData, category: value })}
+        >
+          <SelectTrigger id="category">
+            <SelectValue placeholder="General (no category)" />
+          </SelectTrigger>
+          <SelectContent>
+            {FEED_CATEGORIES.map((cat) => (
+              <SelectItem key={cat.value} value={cat.value}>
+                {cat.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <Label htmlFor="prompt">Custom Prompt Instructions (Optional)</Label>

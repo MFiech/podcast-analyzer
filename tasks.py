@@ -116,16 +116,20 @@ def _analyze_episode_with_tracing(url, force):
 
         # Step 4: Summarize (traced via @observe decorator)
         print("\n🤖 Generating summary...")
-        # Fetch custom instructions from the feed if available
+        # Fetch custom instructions and category from the feed if available
         custom_instructions = ""
+        category = ""
         if episode_data.get('feed_id'):
             feed = db.get_feed_by_id(str(episode_data['feed_id']))
             if feed:
                 custom_instructions = feed.get('customPromptInstructions', '')
+                category = feed.get('category', '')
                 if custom_instructions:
                     print(f"📋 Using custom instructions from feed: {feed.get('title', 'Unknown')}")
+                if category:
+                    print(f"📂 Using category: {category}")
 
-        summary = summarizer.summarize(clean_transcript, episode_data['title'], custom_instructions=custom_instructions)
+        summary = summarizer.summarize(clean_transcript, episode_data['title'], custom_instructions=custom_instructions, category=category)
         episode_data['summary'] = summary
 
         episode_data['duration'] = episode_data.get('duration', 0)
@@ -198,17 +202,21 @@ def resummarize_episode(self, episode_id):
         print("\n📄 Using existing cleaned transcript...")
         clean_transcript = episode.get('transcript', episode['raw_transcript'])
 
-        # Step 2: Fetch custom instructions from the feed if available
+        # Step 2: Fetch custom instructions and category from the feed if available
         custom_instructions = ""
+        category = ""
         if episode.get('feed_id'):
             feed = db.get_feed_by_id(str(episode['feed_id']))
             if feed:
                 custom_instructions = feed.get('customPromptInstructions', '')
+                category = feed.get('category', '')
                 print(f"📋 Using custom instructions from feed: {feed.get('title', 'Unknown')}")
+                if category:
+                    print(f"📂 Using category: {category}")
 
         # Step 3: Generate new summary (traced via @observe)
         print("\n🤖 Re-generating summary...")
-        summary = summarizer.summarize(clean_transcript, episode['title'], custom_instructions=custom_instructions)
+        summary = summarizer.summarize(clean_transcript, episode['title'], custom_instructions=custom_instructions, category=category)
 
         # Step 4: Update the episode with new summary
         update_data = {
@@ -272,17 +280,21 @@ def reclean_episode(self, episode_id):
         print("\n🧹 Re-cleaning transcript...")
         clean_transcript = cleaner.clean_transcript(episode['raw_transcript'], episode['title'])
 
-        # Step 2: Fetch custom instructions from the feed if available
+        # Step 2: Fetch custom instructions and category from the feed if available
         custom_instructions = ""
+        category = ""
         if episode.get('feed_id'):
             feed = db.get_feed_by_id(str(episode['feed_id']))
             if feed:
                 custom_instructions = feed.get('customPromptInstructions', '')
+                category = feed.get('category', '')
                 print(f"📋 Using custom instructions from feed: {feed.get('title', 'Unknown')}")
+                if category:
+                    print(f"📂 Using category: {category}")
 
         # Step 3: Generate new summary (traced via @observe)
         print("\n🤖 Re-generating summary...")
-        summary = summarizer.summarize(clean_transcript, episode['title'], custom_instructions=custom_instructions)
+        summary = summarizer.summarize(clean_transcript, episode['title'], custom_instructions=custom_instructions, category=category)
 
         # Step 4: Update the episode with new cleaned transcript and summary
         update_data = {
