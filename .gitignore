@@ -4,7 +4,6 @@
 .env.backup
 
 # Docker
-docker-compose.yml
 
 # Python
 __pycache__/
@@ -74,7 +73,7 @@ temp/
 .pytest_cache/
 
 # Claude Code
-.claude/
+.claude/settings.local.json
 
 # Database files
 *.db

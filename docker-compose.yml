@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: "mongo:latest"
+    container_name: podcast_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: "redis:alpine"
+    container_name: redis
+    ports:
+      - "6380:6379"
+    restart: unless-stopped
+
+  web:
+    build: .
+    container_name: podcast_web
+    command: flask --app web.app run --host=0.0.0.0
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./web:/app/web
+      - ./data:/app/data
+      - ./.env:/app/.env
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./database.py:/app/database.py
+      - ./feed_processor.py:/app/feed_processor.py
+    environment:
+      - MONGO_CONNECTION_STRING=mongodb://mongodb:27017/podcast_db
+      - FLASK_ENV=development
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
+      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+    depends_on:
+      - redis
+      - mongodb
+
+  worker:
+    build: .
+    container_name: podcast_worker
+    command: celery -A celery_app worker --loglevel=info
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+      - ./database.py:/app/database.py
+      - ./feed_processor.py:/app/feed_processor.py
+    environment:
+      - MONGO_CONNECTION_STRING=mongodb://mongodb:27017/podcast_db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
+      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+    depends_on:
+      - redis
+      - mongodb
+    restart: unless-stopped
+
+  feeder:
+    build: .
+    container_name: podcast_feeder
+    command: python scheduled_feeder.py
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+      - ./scheduled_feeder.py:/app/scheduled_feeder.py
+    environment:
+      - MONGO_CONNECTION_STRING=mongodb://mongodb:27017/podcast_db
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST}
+      - LANGFUSE_ENABLED=${LANGFUSE_ENABLED:-false}
+      - FEEDER_INTERVAL_MINUTES=${FEEDER_INTERVAL_MINUTES:-60}
+    depends_on:
+      - redis
+      - worker
+      - mongodb
+    restart: unless-stopped
+
+  dozzle:
+    image: amir20/dozzle:latest
+    container_name: podcast_dozzle
+    ports:
+      - "5001:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - DOZZLE_NO_ANALYTICS=true
+      - DOZZLE_HOSTNAME=podcast-analyzer-local
+      - DOZZLE_LEVEL=info
+    restart: unless-stopped
+
+  web-frontend:
+    build: ./web-frontend
+    container_name: podcast_web_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:5002
+    depends_on:
+      - web
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
