@@ -153,16 +153,17 @@ class PodcastDB:
         return self.episodes.delete_one({'_id': ObjectId(episode_id)})
 
     # RSS Feed Management Methods
-    def add_feed(self, feed_url, title="", custom_instructions=""):
+    def add_feed(self, feed_url, title="", custom_instructions="", category=""):
         """Add a new RSS feed."""
         if self.feed_exists(feed_url):
             return self.get_feed(feed_url)
-            
+
         feed = {
             'url': feed_url,
             'title': title,
             'active': True,
             'customPromptInstructions': custom_instructions,
+            'category': category,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }

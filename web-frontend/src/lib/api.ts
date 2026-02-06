@@ -40,6 +40,15 @@ export interface Episode {
   updated_at?: string;
 }
 
+export type FeedCategory = '' | 'news' | 'products_ai' | 'spanish_learning';
+
+export const FEED_CATEGORIES: { value: string; label: string }[] = [
+  { value: '_none', label: 'General (no category)' },
+  { value: 'news', label: 'News' },
+  { value: 'products_ai', label: 'Products & AI' },
+  { value: 'spanish_learning', label: 'Spanish Learning' },
+];
+
 export interface Feed {
   id: string;
   title: string;
@@ -48,6 +57,7 @@ export interface Feed {
   last_updated?: string;
   status?: 'active' | 'error';
   customPromptInstructions?: string;
+  category?: FeedCategory;
 }
 
 export interface FeederStatus {
@@ -119,6 +129,7 @@ export const addFeed = async (data: {
   feed_url: string;
   feed_title: string;
   custom_prompt?: string;
+  category?: FeedCategory;
 }) => {
   const response = await apiClient.post('/api/feeds', data);
   return response.data;
@@ -128,6 +139,7 @@ export const updateFeed = async (feedId: string, data: {
   feed_url: string;
   feed_title: string;
   custom_prompt?: string;
+  category?: FeedCategory;
 }) => {
   const response = await apiClient.put(`/api/feeds/${feedId}`, data);
   return response.data;
