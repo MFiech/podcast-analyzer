@@ -5,11 +5,10 @@ WORKDIR /app
 
 # Accept build arguments for external service URLs
 # Note: NEXT_PUBLIC_API_BASE_URL is no longer needed as we use runtime detection
-ARG NEXT_PUBLIC_DOZZLE_URL=http://localhost:5000
-ARG NEXT_PUBLIC_LANGFUSE_URL=https://cloud.langfuse.com
+# Note: Leave DOZZLE_URL empty so the app uses dynamic hostname:5001 at runtime
+ARG NEXT_PUBLIC_LANGFUSE_URL=https://cloud.langfuse.com/project/cmh3umme800vzad075pjehiow
 ARG NEXT_PUBLIC_GITHUB_URL=https://github.com/MFiech/podcast-analyzer
 
-ENV NEXT_PUBLIC_DOZZLE_URL=$NEXT_PUBLIC_DOZZLE_URL
 ENV NEXT_PUBLIC_LANGFUSE_URL=$NEXT_PUBLIC_LANGFUSE_URL
 ENV NEXT_PUBLIC_GITHUB_URL=$NEXT_PUBLIC_GITHUB_URL
 
