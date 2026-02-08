@@ -62,6 +62,9 @@ celery.log
 # Node modules (if any)
 node_modules/
 
+# Next.js build output
+.next/
+
 # Temporary files
 tmp/
 temp/

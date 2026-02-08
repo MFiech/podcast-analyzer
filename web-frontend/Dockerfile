@@ -11,6 +11,7 @@ ARG NEXT_PUBLIC_GITHUB_URL=https://github.com/MFiech/podcast-analyzer
 
 ENV NEXT_PUBLIC_LANGFUSE_URL=$NEXT_PUBLIC_LANGFUSE_URL
 ENV NEXT_PUBLIC_GITHUB_URL=$NEXT_PUBLIC_GITHUB_URL
+ENV NEXT_TELEMETRY_DISABLED=1
 
 # Copy package files
 COPY package*.json ./
@@ -28,6 +29,10 @@ RUN npm run build
 FROM node:20-alpine
 
 WORKDIR /app
+
+# Disable Next.js telemetry and unrs-resolver fallback downloads
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV SKIP_UNRS_RESOLVER_FALLBACK=1
 
 # Install dumb-init to handle signals properly
 RUN apk add --no-cache dumb-init
