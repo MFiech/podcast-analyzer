@@ -98,20 +98,6 @@ services:
       - DOZZLE_LEVEL=info
     restart: unless-stopped
 
-  setup-prompts:
-    build: .
-    container_name: podcast_setup_prompts
-    command: python setup_prompts.py
-    profiles:
-      - setup
-    volumes:
-      - ./.env:/app/.env
-      - ./setup_prompts.py:/app/setup_prompts.py
-    environment:
-      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
-      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_HOST=${LANGFUSE_HOST}
-
   web-frontend:
     build: ./web-frontend
     container_name: podcast_web_frontend

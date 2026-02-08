@@ -27,4 +27,4 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cd /home/podcast/podcast-analyzer && git pull origin main && docker compose build && docker compose up -d && echo "Deploy complete at $(date)"'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} 'cd /home/podcast/podcast-analyzer && git pull origin main && docker compose build && docker compose up -d && sleep 5 && docker compose exec -T worker python setup_prompts.py && echo "Deploy complete at $(date)"'
