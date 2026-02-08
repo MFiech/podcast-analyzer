@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getEpisodes } from '@/lib/api';
+import { getEpisodes, FEED_CATEGORIES } from '@/lib/api';
 import { LastSyncBox } from '@/components/LastSyncBox';
 import { EpisodeCard } from '@/components/EpisodeCard';
 import { AddEpisodeModal } from '@/components/AddEpisodeModal';
@@ -10,13 +10,19 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus } from 'lucide-react';
 
+const categoryFilters = [
+  { value: '', label: 'All' },
+  ...FEED_CATEGORIES.filter((c) => c.value !== '_none'),
+];
+
 export default function Home() {
   const [limit, setLimit] = useState(10);
+  const [category, setCategory] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
 
   const { data: episodes, isLoading, error } = useQuery({
-    queryKey: ['episodes', limit],
-    queryFn: () => getEpisodes({ limit }),
+    queryKey: ['episodes', limit, category],
+    queryFn: () => getEpisodes({ limit, ...(category ? { category } : {}) }),
   });
 
   const episodesList = episodes?.episodes || [];
@@ -35,6 +41,26 @@ export default function Home() {
       </div>
 
       <LastSyncBox />
+
+      {/* Category Filter Chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 mb-4 -mx-1 px-1 scrollbar-hide">
+        {categoryFilters.map((filter) => (
+          <button
+            key={filter.value}
+            onClick={() => {
+              setCategory(filter.value);
+              setLimit(10);
+            }}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+              category === filter.value
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {filter.label}
+          </button>
+        ))}
+      </div>
 
       {isLoading ? (
         <div className="space-y-3">

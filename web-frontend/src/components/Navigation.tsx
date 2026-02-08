@@ -17,14 +17,20 @@ const navigationItems = [
   { href: '/feeds', label: 'RSS Feeds' },
 ];
 
-const moreItems = [
-  { label: 'Prompt Evals', icon: BarChart3, href: process.env.NEXT_PUBLIC_LANGFUSE_URL || 'https://cloud.langfuse.com/project/cmh3umme800vzad075pjehiow', external: true },
-  { label: 'Server Logs', icon: Info, href: process.env.NEXT_PUBLIC_DOZZLE_URL || 'http://localhost:5000', external: true },
-  { label: 'GitHub Repo', icon: Github, href: process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/MFiech/podcast-analyzer', external: true },
-];
+const getDozzleUrl = () => {
+  if (process.env.NEXT_PUBLIC_DOZZLE_URL) return process.env.NEXT_PUBLIC_DOZZLE_URL;
+  if (typeof window === 'undefined') return 'http://localhost:5001';
+  return `${window.location.protocol}//${window.location.hostname}:5001`;
+};
 
 export function Navigation() {
   const pathname = usePathname();
+
+  const moreItems = [
+    { label: 'Prompt Evals', icon: BarChart3, href: process.env.NEXT_PUBLIC_LANGFUSE_URL || 'https://cloud.langfuse.com/project/cmh3umme800vzad075pjehiow', external: true },
+    { label: 'Server Logs', icon: Info, href: getDozzleUrl(), external: true },
+    { label: 'GitHub Repo', icon: Github, href: process.env.NEXT_PUBLIC_GITHUB_URL || 'https://github.com/MFiech/podcast-analyzer', external: true },
+  ];
 
   return (
     <>

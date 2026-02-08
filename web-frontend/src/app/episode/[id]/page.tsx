@@ -4,7 +4,6 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useRouter } from 'next/navigation';
 import { getEpisode } from '@/lib/api';
-import { AudioPlayer } from '@/components/AudioPlayer';
 import { EpisodeMenu } from '@/components/EpisodeMenu';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
@@ -79,7 +78,7 @@ export default function EpisodeDetailPage() {
   };
 
   return (
-    <div className="pb-40 md:pb-32">
+    <div className="pb-24 md:pb-4">
       <div className="sticky top-0 md:top-16 bg-white border-b z-30">
         <div className="px-4 py-4 max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-3 gap-2">
@@ -134,12 +133,6 @@ export default function EpisodeDetailPage() {
         )}
       </div>
 
-      {(episode.audio_path || episode.file_path) && (
-        <AudioPlayer
-          audioUrl={`${typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.hostname}:5002` : 'http://localhost:5002'}/data/${episode.audio_path || episode.file_path}`}
-          title={episode.title}
-        />
-      )}
     </div>
   );
 }

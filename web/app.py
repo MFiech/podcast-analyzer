@@ -271,10 +271,11 @@ def api_episodes():
     """API endpoint to get episodes list."""
     db = PodcastDB()
     status_filter = request.args.get('status')
+    category_filter = request.args.get('category')
     limit = int(request.args.get('limit', 10))
     offset = int(request.args.get('offset', 0))
-    
-    episodes = db.list_episodes(include_hidden=False)
+
+    episodes = db.list_episodes(include_hidden=False, category=category_filter)
     
     # Filter by status if provided
     if status_filter:
