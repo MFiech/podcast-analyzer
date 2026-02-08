@@ -72,6 +72,7 @@ export interface FeederStatus {
 // Episodes
 export const getEpisodes = async (filters?: {
   status?: string;
+  category?: string;
   limit?: number;
   offset?: number;
 }) => {

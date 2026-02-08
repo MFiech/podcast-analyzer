@@ -68,12 +68,12 @@ class PodcastDB:
         from bson.objectid import ObjectId
         return self.episodes.find_one({'_id': ObjectId(episode_id)})
 
-    def list_episodes(self, include_hidden=False):
+    def list_episodes(self, include_hidden=False, category=None):
         """List all episodes with feed information"""
         query = {}
         if not include_hidden:
             query['hidden'] = {'$ne': True}
-        
+
         # Use aggregation to join with feeds collection
         pipeline = [
             {'$match': query},
@@ -92,9 +92,18 @@ class PodcastDB:
                     }
                 }
             }},
-            {'$sort': {'created_at': -1}}
         ]
-        
+
+        # Filter by feed category if provided
+        if category:
+            pipeline.append({
+                '$match': {
+                    'feed_info.category': category
+                }
+            })
+
+        pipeline.append({'$sort': {'created_at': -1}})
+
         return list(self.episodes.aggregate(pipeline))
     
     def update_episode(self, url, update_data):
