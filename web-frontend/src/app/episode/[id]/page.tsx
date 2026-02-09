@@ -89,6 +89,7 @@ export default function EpisodeDetailPage() {
               episodeId={episodeId}
               hasTranscript={!!episode.transcript}
               status={episode.status}
+              currentCategory={episode.prompt_category || ''}
             />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 leading-tight">{episode.title}</h1>

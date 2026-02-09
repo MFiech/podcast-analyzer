@@ -400,8 +400,12 @@ def api_summarize_again(episode_id):
                 mimetype='application/json'
             )
         
+        # Parse optional category from request body
+        data = request.get_json(silent=True) or {}
+        category = data.get('category')
+
         from tasks import resummarize_episode
-        resummarize_episode.delay(episode_id)
+        resummarize_episode.delay(episode_id, category=category)
         return app.response_class(
             response=dumps({'success': True, 'message': 'Episode queued for re-summarization'}),
             status=200,

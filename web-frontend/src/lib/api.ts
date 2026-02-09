@@ -38,12 +38,20 @@ export interface Episode {
   completed_date?: string;
   created_at?: string;
   updated_at?: string;
+  prompt_category?: string;
 }
 
 export type FeedCategory = '' | 'news' | 'products_ai' | 'spanish_learning';
 
 export const FEED_CATEGORIES: { value: string; label: string }[] = [
   { value: '_none', label: 'General (no category)' },
+  { value: 'news', label: 'News' },
+  { value: 'products_ai', label: 'Products & AI' },
+  { value: 'spanish_learning', label: 'Spanish Learning' },
+];
+
+export const EPISODE_CATEGORIES: { value: string; label: string }[] = [
+  { value: '_none', label: 'General' },
   { value: 'news', label: 'News' },
   { value: 'products_ai', label: 'Products & AI' },
   { value: 'spanish_learning', label: 'Spanish Learning' },
@@ -90,8 +98,9 @@ export const addEpisode = async (url: string) => {
   return response.data;
 };
 
-export const summarizeAgain = async (episodeId: string) => {
-  const response = await apiClient.post(`/api/episodes/${episodeId}/summarize-again`);
+export const summarizeAgain = async (episodeId: string, category?: string) => {
+  const body = category !== undefined ? { category: category === '_none' ? '' : category } : {};
+  const response = await apiClient.post(`/api/episodes/${episodeId}/summarize-again`, body);
   return response.data;
 };
 

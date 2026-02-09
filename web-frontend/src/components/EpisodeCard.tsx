@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +14,9 @@ import { Button } from '@/components/ui/button';
 import { MoreVertical, RotateCcw, RefreshCw, Eraser, Trash2, AlertCircle } from 'lucide-react';
 import { Episode } from '@/lib/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { retryEpisode, recleanEpisode, deleteEpisode, summarizeAgain } from '@/lib/api';
+import { retryEpisode, recleanEpisode, deleteEpisode } from '@/lib/api';
 import { toast } from 'sonner';
+import { ResummarizeModal } from '@/components/ResummarizeModal';
 
 interface EpisodeCardProps {
   episode: Episode;
@@ -30,6 +31,7 @@ const statusConfig = {
 export function EpisodeCard({ episode }: EpisodeCardProps) {
   const queryClient = useQueryClient();
   const statusInfo = statusConfig[episode.status as keyof typeof statusConfig];
+  const [showResummarizeModal, setShowResummarizeModal] = useState(false);
 
   const { mutate: handleRetry } = useMutation({
     mutationFn: () => retryEpisode(episode.id),
@@ -49,15 +51,6 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
     onError: () => toast.error('Failed to re-clean episode'),
   });
 
-  const { mutate: handleResummarize } = useMutation({
-    mutationFn: () => summarizeAgain(episode.id),
-    onSuccess: () => {
-      toast.success('Episode queued for re-summarization');
-      queryClient.invalidateQueries({ queryKey: ['episodes'] });
-    },
-    onError: () => toast.error('Failed to re-summarize episode'),
-  });
-
   const { mutate: handleDelete } = useMutation({
     mutationFn: () => deleteEpisode(episode.id),
     onSuccess: () => {
@@ -66,7 +59,7 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
     },
     onError: () => toast.error('Failed to delete episode'),
   });
-  
+
   // Helper functions to format data
   const formatDuration = (seconds: number | string) => {
     if (typeof seconds === 'string') return seconds;
@@ -74,7 +67,7 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
     const secs = seconds % 60;
     return `${mins}:${String(secs).padStart(2, '0')}`;
   };
-  
+
   const formatDate = (dateStr: string | any | undefined) => {
     if (!dateStr) return 'Unknown';
     try {
@@ -95,87 +88,95 @@ export function EpisodeCard({ episode }: EpisodeCardProps) {
   };
 
   return (
-    <Card className="p-4 mb-3 hover:shadow-md transition-shadow relative">
-      <div className="flex gap-3">
-        <Link href={`/episode/${episode.id}`} className="flex-1 min-w-0 cursor-pointer">
-          <div>
-            <h3 className="font-semibold text-gray-900 line-clamp-2">{episode.title}</h3>
-            <p className="text-xs text-gray-600 mt-2">
-              📡 {episode.feed_title || episode.feed_source || 'Unknown'}
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {formatDate(episode.created_at || episode.submitted_date)}
-            </p>
-            {episode.status === 'processing' && (
-              <p className="text-xs text-orange-600 mt-2 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" />
-                Processing... Estimated completion: 5 minutes
+    <>
+      <Card className="p-4 mb-3 hover:shadow-md transition-shadow relative">
+        <div className="flex gap-3">
+          <Link href={`/episode/${episode.id}`} className="flex-1 min-w-0 cursor-pointer">
+            <div>
+              <h3 className="font-semibold text-gray-900 line-clamp-2">{episode.title}</h3>
+              <p className="text-xs text-gray-600 mt-2">
+                📡 {episode.feed_title || episode.feed_source || 'Unknown'}
               </p>
-            )}
-            {episode.status === 'failed' && (
-              <p className="text-xs text-red-600 mt-2 line-clamp-1">
-                {episode.summary || 'Processing failed due to audio quality issues'}
+              <p className="text-xs text-gray-500 mt-1">
+                {formatDate(episode.created_at || episode.submitted_date)}
               </p>
-            )}
+              {episode.status === 'processing' && (
+                <p className="text-xs text-orange-600 mt-2 flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Processing... Estimated completion: 5 minutes
+                </p>
+              )}
+              {episode.status === 'failed' && (
+                <p className="text-xs text-red-600 mt-2 line-clamp-1">
+                  {episode.summary || 'Processing failed due to audio quality issues'}
+                </p>
+              )}
+            </div>
+          </Link>
+          <div className="flex flex-col items-end justify-between gap-2">
+            <Badge variant="secondary" className={statusInfo.color}>
+              {statusInfo.label}
+            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={(e) => e.preventDefault()} className="h-8 w-8">
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {(episode.status === 'failed' || episode.status === 'processing') ? (
+                  <>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.preventDefault();
+                      handleRetry();
+                    }}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Retry
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.preventDefault();
+                      handleDelete();
+                    }}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                ) : episode.status === 'completed' ? (
+                  <>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.preventDefault();
+                      handleReclean();
+                    }}>
+                      <Eraser className="w-4 h-4 mr-2" />
+                      Re-clean
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.preventDefault();
+                      setShowResummarizeModal(true);
+                    }}>
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Re-summarize
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => {
+                      e.preventDefault();
+                      handleDelete();
+                    }}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        </Link>
-        <div className="flex flex-col items-end justify-between gap-2">
-          <Badge variant="secondary" className={statusInfo.color}>
-            {statusInfo.label}
-          </Badge>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={(e) => e.preventDefault()} className="h-8 w-8">
-                <MoreVertical className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {(episode.status === 'failed' || episode.status === 'processing') ? (
-                <>
-                  <DropdownMenuItem onClick={(e) => {
-                    e.preventDefault();
-                    handleRetry();
-                  }}>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Retry
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => {
-                    e.preventDefault();
-                    handleDelete();
-                  }}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </>
-              ) : episode.status === 'completed' ? (
-                <>
-                  <DropdownMenuItem onClick={(e) => {
-                    e.preventDefault();
-                    handleReclean();
-                  }}>
-                    <Eraser className="w-4 h-4 mr-2" />
-                    Re-clean
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => {
-                    e.preventDefault();
-                    handleResummarize();
-                  }}>
-                    <RotateCcw className="w-4 h-4 mr-2" />
-                    Re-summarize
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => {
-                    e.preventDefault();
-                    handleDelete();
-                  }}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
-      </div>
-    </Card>
+      </Card>
+      <ResummarizeModal
+        open={showResummarizeModal}
+        onOpenChange={setShowResummarizeModal}
+        episodeId={episode.id}
+        currentCategory={episode.prompt_category || ''}
+      />
+    </>
   );
 }
