@@ -102,7 +102,7 @@ export default function EpisodeDetailPage() {
 
         {episode.status === 'completed' && episode.summary ? (
           <div className="mb-8 p-6 bg-gray-50 rounded-lg">
-            <div className="prose prose-md dark:prose-invert max-w-none text-gray-700 leading-relaxed [&_p]:mb-4 [&_p]:last:mb-0 [&_ul]:mb-4 [&_li]:mb-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm">
+            <div className="prose prose-md dark:prose-invert max-w-none text-gray-700 leading-relaxed [&_p]:mb-4 [&_p]:last:mb-0 [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:mb-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:mb-2 [&_h1]:text-lg [&_h2]:text-base [&_h3]:text-sm">
               <ReactMarkdown>
                 {episode.summary}
               </ReactMarkdown>
