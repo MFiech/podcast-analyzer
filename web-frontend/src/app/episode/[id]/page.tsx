@@ -61,16 +61,23 @@ export default function EpisodeDetailPage() {
   const formatDate = (dateStr: string | any | undefined) => {
     if (!dateStr) return 'Unknown';
     try {
-      // Handle BSON extended JSON format: {"$date": "..."}
+      let date: Date;
       if (typeof dateStr === 'object' && dateStr.$date) {
-        const date = new Date(dateStr.$date);
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        date = new Date(dateStr.$date);
+      } else {
+        date = new Date(dateStr);
       }
-      // Handle ISO-8601 string format
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) {
-        return 'Unknown';
-      }
+      if (isNaN(date.getTime())) return 'Unknown';
+
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+      if (dateOnly.getTime() === today.getTime()) return 'Today';
+      if (dateOnly.getTime() === yesterday.getTime()) return 'Yesterday';
+
       return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
     } catch {
       return 'Unknown';
