@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { SummaryPlayer } from '@/components/SummaryPlayer';
 
 const statusConfig = {
   completed: { label: 'Completed', color: 'bg-green-100 text-green-800' },
@@ -85,7 +86,7 @@ export default function EpisodeDetailPage() {
   };
 
   return (
-    <div className="pb-24 md:pb-4">
+    <div className="pb-36 md:pb-4">
       <div className="sticky top-0 md:top-16 bg-white border-b z-30">
         <div className="px-4 py-4 max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-3 gap-2">
@@ -105,6 +106,9 @@ export default function EpisodeDetailPage() {
       </div>
 
       <div className="px-4 py-6 max-w-4xl mx-auto">
+        {episode.status === 'completed' && episode.summary && (
+          <SummaryPlayer summaryText={episode.summary} />
+        )}
         <h2 className="text-lg font-bold text-gray-900 mb-4">AI Summary</h2>
 
         {episode.status === 'completed' && episode.summary ? (
