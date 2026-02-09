@@ -74,7 +74,11 @@ class PodcastDB:
         if not include_hidden:
             query['hidden'] = {'$ne': True}
 
-        # Use aggregation to join with feeds collection
+        # Filter by episode's own prompt_category if provided
+        if category:
+            query['prompt_category'] = category
+
+        # Use aggregation to join with feeds collection for feed_title
         pipeline = [
             {'$match': query},
             {'$lookup': {
@@ -93,14 +97,6 @@ class PodcastDB:
                 }
             }},
         ]
-
-        # Filter by feed category if provided
-        if category:
-            pipeline.append({
-                '$match': {
-                    'feed_info.category': category
-                }
-            })
 
         pipeline.append({'$sort': {'created_at': -1}})
 
