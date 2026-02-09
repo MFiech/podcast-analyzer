@@ -54,9 +54,9 @@ export function SummaryPlayer({ summaryText }: SummaryPlayerProps) {
       <div className="flex items-center gap-3 max-w-4xl mx-auto">
         <Button variant="ghost" size="icon" onClick={togglePlayStop} className="h-10 w-10 flex-shrink-0">
           {isPlaying ? (
-            <StopCircle className="w-8 h-8 text-blue-600" />
+            <StopCircle className="w-16 h-16 text-blue-600" />
           ) : (
-            <PlayCircle className="w-8 h-8 text-blue-600" />
+            <PlayCircle className="w-16 h-16 text-blue-600" />
           )}
         </Button>
 
@@ -81,7 +81,7 @@ export function SummaryPlayer({ summaryText }: SummaryPlayerProps) {
           variant="ghost"
           size="sm"
           onClick={cycleSpeed}
-          className="text-xs font-bold text-blue-600 min-w-[3rem] px-2"
+          className="text-xs font-bold text-blue-600 w-[3.5rem] px-2"
         >
           {playbackSpeed}x
         </Button>
